@@ -8,7 +8,7 @@ export class GreenhouseAdapter extends BaseAdapter {
 
   detect(doc: Document, url: URL): boolean {
     return /(^|\.)greenhouse\.io$/.test(url.hostname)
-      || !!doc.querySelector("#grnhse_app,#application_form,form#application-form,[data-greenhouse]")
+      || !!doc.querySelector("#grnhse_app,#application_form,[data-greenhouse]")
       || (url.searchParams.has("gh_jid") && !!doc.querySelector("#main_fields,#application_form"));
   }
 

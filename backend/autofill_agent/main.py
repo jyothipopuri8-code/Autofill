@@ -6,7 +6,8 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -18,7 +19,7 @@ from autofill_agent.api import answers, applications, data, health, profile, res
 from autofill_agent.config import Settings, get_settings
 from autofill_agent.db import Database
 from autofill_agent.logging_setup import configure_logging
-from autofill_agent.middleware import OriginGuardMiddleware
+from autofill_agent.middleware import BodyLimitMiddleware, OriginGuardMiddleware
 from autofill_agent.security import load_or_create_token
 
 log = logging.getLogger("autofill_agent")
@@ -75,6 +76,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         own_origins=[f"http://127.0.0.1:{settings.port}", f"http://localhost:{settings.port}"],
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
+    # Added last so it runs first: oversized bodies are refused before anything reads them.
+    app.add_middleware(BodyLimitMiddleware, json_limit=8 * 1024 * 1024, upload_limit=settings.max_resume_bytes + 1024 * 1024)
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
+        # Never echo internals (paths, SQL, stack frames) to a caller; the redacted log has the details.
+        log.error("Unhandled error on %s %s: %s", request.method, request.url.path, type(exc).__name__, exc_info=settings.developer_mode)
+        return JSONResponse({"detail": "Internal error"}, status_code=500)
 
     app.include_router(health.router)
     app.include_router(profile.router)

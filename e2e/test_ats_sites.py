@@ -105,3 +105,52 @@ def test_multi_page_application_keeps_its_session_across_real_navigations(sessio
     assert re.sub(r"\D", "", page.input_value("#ph")) == "5551234567" and page.input_value("#city") == "Austin"
     assert page.input_value("#why") == ""
     assert page.evaluate("window.__submitClicks") == 0
+
+
+def test_lever_like_page_uses_a_single_full_name_field(session, agent):
+    s = session("lever.html")
+    fill_all(s)
+    page = s.page
+    app = agent.api("GET", "/api/v1/sessions").json()[0]["application"]
+    assert app["ats"] == "LEVER" and "Application Security Engineer" in app["job_title"]
+    assert page.input_value("#name") == "Jane Doe" and page.input_value("#email") == "jane.doe@example.com"
+    assert page.input_value("#linkedin") == "https://linkedin.com/in/janedoe"
+    assert page.evaluate("document.getElementById('resume').files[0]?.name") == "Jane.pdf"
+    assert page.input_value("#q1") == ""
+    assert page.evaluate("window.__submitClicks") == 0
+
+
+def test_repeatable_sections_experience_education_certifications_languages(session, agent):
+    s = session("sections.html")
+    s.start()
+    s.wait_ready()
+    page = s.page
+    banner = s.panel_text()
+    assert "Your resume has 2 work experience entries; this page shows 1" in banner
+    assert "Your resume has 2 certification entries; this page shows 1" in banner
+    assert "Your resume has 3 language entries; this page shows 1" in banner
+    assert "Your resume has 1 education" not in banner  # one entry on the resume, one on the page
+
+    for name, n in (("work experience", 2), ("certification", 2), ("language", 3)):
+        before = page.locator(".entry").count()
+        s.page.locator("[data-autofill-agent] .banner", has_text=f"Your resume has {n} {name}").get_by_text("Add").click()
+        page.wait_for_function("(b) => document.querySelectorAll('.entry').length > b", arg=before)
+        s.page.locator("[data-autofill-agent] .wrap[data-phase='ready']").wait_for()
+    s.click("Rescan page")
+    s.wait_ready()
+    s.click("Fill")
+    s.wait_filled()
+
+    v = lambda i: page.input_value(f"#{i}")
+    assert (v("jt1"), v("co1"), v("sd1")) == ("Senior Security Engineer", "CrowdStrike", "01/2021")
+    assert v("ed1") == "", "an ongoing job has no end date"
+    assert page.is_checked("#cur1") and not page.is_checked("#cur2")
+    assert (v("jt2"), v("co2"), v("sd2"), v("ed2")) == ("Security Analyst", "Acme Corp", "06/2018", "12/2020")
+    assert "Triaged alerts" in v("ds2")
+    assert v("sc1") == "University of Texas at Austin" and page.input_value("#dg1") == "Bachelor's Degree" and v("gd1") == "05/2018"
+    assert v("cn1") == "CISSP" and v("cn2") == "AWS Certified Security - Specialty"
+    assert v("ci1") == "" and v("ci2") == "", "a certification year without a month is never turned into a made-up date"
+    assert [v("ln_1"), v("ln_2"), v("ln_3")] == ["English", "Spanish", "French"]
+    assert [page.input_value("#lp1"), page.input_value("#lp2")] == ["Native", "Professional"] and page.input_value("#lp3") == ""
+    assert page.evaluate("document.getElementById('resume').files[0]?.name") == "Jane.pdf"
+    assert page.evaluate("window.__submitClicks") == 0

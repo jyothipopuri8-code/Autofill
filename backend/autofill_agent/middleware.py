@@ -18,6 +18,9 @@ SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Cache-Control": "no-store",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
 }
 
 
@@ -47,3 +50,54 @@ class OriginGuardMiddleware(BaseHTTPMiddleware):
         for k, v in headers.items():
             response.headers.setdefault(k, v)
         return response
+
+
+class BodyLimitMiddleware:
+    """Reject oversized request bodies before they are read (a local process or page could otherwise exhaust memory).
+
+    Resume uploads get ``upload_limit`` (the configured resume size plus multipart overhead); everything else is JSON
+    from the extension or dashboard and gets ``json_limit``.
+    """
+
+    def __init__(self, app, json_limit: int, upload_limit: int) -> None:
+        self.app = app
+        self.json_limit = json_limit
+        self.upload_limit = upload_limit
+
+    def _limit(self, scope) -> int:
+        path = scope.get("path", "")
+        return self.upload_limit if scope.get("method") == "POST" and path.rstrip("/") == "/api/v1/resumes" else self.json_limit
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        limit = self._limit(scope)
+        declared = next((v for k, v in scope["headers"] if k == b"content-length"), None)
+        if declared is not None:
+            try:
+                too_big = int(declared) > limit
+            except ValueError:
+                too_big = True
+            if too_big:
+                await JSONResponse({"detail": "Request body too large"}, status_code=413)(scope, receive, send)
+                return
+        seen = 0
+
+        async def limited_receive():
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > limit:
+                    raise _TooLarge()
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _TooLarge:
+            await JSONResponse({"detail": "Request body too large"}, status_code=413)(scope, receive, send)
+
+
+class _TooLarge(Exception):
+    pass

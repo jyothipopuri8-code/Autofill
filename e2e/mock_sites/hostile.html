@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Hostile Corp - Security Engineer</title>
+  <style>
+    body{font:15px system-ui;max-width:700px;margin:24px auto;padding:0 16px}
+    .f{margin:12px 0}label{display:block;font-weight:600}input[type=text],input[type=email],input[type=tel],textarea{width:100%;padding:6px}
+    .h1{position:absolute;left:-9999px;top:-9999px}
+    .h2{opacity:0;position:absolute}
+    input[type=text].h3{width:1px;height:1px;padding:0;border:0;overflow:hidden}
+    .h4{display:none}
+    .h5{clip:rect(0,0,0,0);position:absolute}
+  </style>
+</head>
+<body>
+  <h1>Security Engineer</h1>
+  <p>Hostile Corp is hiring a Security Engineer to review code, run penetration tests and respond to incidents across our platform. You will work with product teams to ship secure features.</p>
+  <form id="application-form">
+    <div class="f"><label for="fn">First name *</label><input id="fn" name="fn" type="text"></div>
+    <div class="f"><label for="ln">Last name *</label><input id="ln" name="ln" type="text"></div>
+    <div class="f"><label for="em">Email *</label><input id="em" name="em" type="email"></div>
+
+    <!-- Honeypots: invisible to a person, tempting to a bot. Each is labelled like a real field. -->
+    <div class="h1 f"><label for="hp1">Email address (confirm)</label><input id="hp1" name="hp1" type="text"></div>
+    <div class="f h2"><label for="hp2">Phone</label><input id="hp2" name="hp2" type="text"></div>
+    <div class="f"><label for="hp3">City</label><input id="hp3" name="hp3" type="text" class="h3"></div>
+    <div class="f h4"><label for="hp4">Last name</label><input id="hp4" name="hp4" type="text"></div>
+    <div class="f"><label for="hp5">Website</label><input id="hp5" name="hp5" type="text" class="h5"></div>
+
+    <!-- Labels that try to inject markup into whatever renders them. -->
+    <div class="f"><label for="q1" id="evil1"></label><textarea id="q1" name="q1" required></textarea></div>
+    <div class="f"><label for="q2" id="evil2"></label><textarea id="q2" name="q2" required></textarea></div>
+    <button type="submit" id="submit">Submit application</button>
+  </form>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("application-form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    // textContent, so the characters really are in the label text and any renderer that uses innerHTML would run them.
+    document.getElementById("evil1").textContent = 'Why us? <img src=x onerror="window.__pwned=1"> <b>bold</b> *';
+    document.getElementById("evil2").textContent = 'Describe your experience</label><script>window.__pwned=2<\/script> *';
+  </script>
+</body>
+</html>

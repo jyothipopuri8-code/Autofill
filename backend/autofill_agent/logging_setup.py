@@ -8,6 +8,7 @@ record is written.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -34,6 +35,18 @@ class RedactingFilter(logging.Filter):
         return True
 
 
+class PrivateRotatingFileHandler(RotatingFileHandler):
+    """Log files readable only by the owner (the folder is already 0700; this is a second layer)."""
+
+    def _open(self):
+        stream = super()._open()
+        try:
+            os.chmod(self.baseFilename, 0o600)
+        except OSError:
+            pass
+        return stream
+
+
 def configure_logging(log_dir: Path, level: str = "INFO") -> None:
     root = logging.getLogger("autofill_agent")
     root.setLevel(level)
@@ -45,7 +58,7 @@ def configure_logging(log_dir: Path, level: str = "INFO") -> None:
     fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     redactor = RedactingFilter()
 
-    file_handler = RotatingFileHandler(log_dir / "agent.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+    file_handler = PrivateRotatingFileHandler(log_dir / "agent.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8")
     console = logging.StreamHandler()
     for h in (file_handler, console):
         h.setFormatter(fmt)

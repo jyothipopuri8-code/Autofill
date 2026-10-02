@@ -100,6 +100,8 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, 
   for (const [k, v] of Object.entries(props)) {
     if (v === undefined || v === null || v === false) continue;
     if (k === "class") el.className = v;
+    // A page script can dispatch clicks into a shadow tree it cannot read; only real user input may press a panel button.
+    else if (k === "onclick" && typeof v === "function") el.addEventListener("click", (ev) => { if (ev.isTrusted) (v as EventListener)(ev); });
     else if (k.startsWith("on") && typeof v === "function") el.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
     else if (k in el && k !== "list") (el as any)[k] = v;
     else el.setAttribute(k, String(v));

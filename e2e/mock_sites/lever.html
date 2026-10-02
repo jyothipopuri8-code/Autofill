@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Wayne Enterprises - Application Security Engineer</title>
+  <style>body{font:15px system-ui;max-width:700px;margin:24px auto;padding:0 16px}.application-field{margin:12px 0}label{display:block;font-weight:600}input[type=text],input[type=email],input[type=tel],textarea{width:100%;padding:6px}</style>
+</head>
+<body>
+  <div class="posting-page">
+    <div class="posting-headline"><h2>Application Security Engineer</h2>
+      <div class="posting-categories"><div class="location">Gotham, NY</div></div></div>
+    <div class="content"><div class="section-wrapper page-full-width">Wayne Enterprises is hiring an Application Security Engineer to run secure code reviews, build tooling for engineers and respond to vulnerability reports from our bug bounty program.</div></div>
+  </div>
+  <div class="application-page">
+    <form id="application-form">
+      <div class="application-field"><label for="name">Full name <span class="required">✱</span></label><input id="name" name="name" type="text" required></div>
+      <div class="application-field"><label for="email">Email <span class="required">✱</span></label><input id="email" name="email" type="email" required></div>
+      <div class="application-field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel"></div>
+      <div class="application-field"><label for="org">Current company</label><input id="org" name="org" type="text"></div>
+      <div class="application-field"><label for="linkedin">LinkedIn URL</label><input id="linkedin" name="urls[LinkedIn]" type="text"></div>
+      <div class="application-field"><label for="github">GitHub URL</label><input id="github" name="urls[GitHub]" type="text"></div>
+      <div class="application-field"><label for="resume">Resume/CV <span class="required">✱</span></label><input id="resume" name="resume" type="file" required></div>
+      <div class="application-field"><label for="q1">Why do you want to work at Wayne Enterprises?</label><textarea id="q1" name="cards[1]"></textarea></div>
+      <button type="submit" id="submit">Submit application</button>
+    </form>
+  </div>
+  <script>window.__submitClicks = 0; document.getElementById("application-form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });</script>
+</body>
+</html>

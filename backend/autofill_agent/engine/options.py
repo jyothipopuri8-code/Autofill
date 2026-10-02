@@ -146,7 +146,7 @@ def match_option(value: str | None, options: list[Option], canonical: str | None
         if lvl:
             hits = [o for o in opts if _degree_level(o.label) == lvl]
             if hits:
-                return _unique(hits, 0.93, "Matched by degree level")
+                return _unique(hits, 1.0, "Matched by degree level")
 
     if canonical == "contact.phone_device_type":
         syn = {"mobile": {"mobile", "cell", "cellular"}, "home": {"home", "landline"}, "work": {"work", "office", "business"}}

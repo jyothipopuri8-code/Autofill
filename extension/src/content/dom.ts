@@ -9,7 +9,27 @@ export function isVisible(el: Element): boolean {
   if (cs.display === "none" || cs.visibility === "hidden" || cs.visibility === "collapse") return false;
   if (el.closest("[style*='display: none'],[style*='display:none']")) return false;
   const r = el.getBoundingClientRect();
-  return r.width > 0 || r.height > 0 || el.getClientRects().length > 0;
+  if (!(r.width > 0 || r.height > 0 || el.getClientRects().length > 0)) return false;
+  return !looksHidden(el, cs, r);
+}
+
+// Honeypots: fields a person can never see or reach (bots fill them, and employers use that to reject bots).
+// A field like that must never be scanned, so it is never filled and never shown to the user as a question.
+function looksHidden(el: HTMLElement, cs: CSSStyleDeclaration, r: DOMRect): boolean {
+  for (let n: HTMLElement | null = el, i = 0; n && i < 12; n = n.parentElement, i++) {
+    if (parseFloat(getComputedStyle(n).opacity) < 0.05) return true;
+  }
+  // Pushed far off-screen (text-indent / left:-9999px tricks), measured in document coordinates.
+  const sx = window.scrollX, sy = window.scrollY;
+  if (r.right + sx < -100 || r.bottom + sy < -100) return true;
+  if (r.left + sx > document.documentElement.scrollWidth + 1000 || r.top + sy > document.documentElement.scrollHeight + 5000) return true;
+  if (/^rect\(\s*0(px)?[ ,]+0(px)?[ ,]+0(px)?[ ,]+0(px)?\s*\)$/.test(cs.clip) || /inset\(\s*(50|100)%/.test(cs.clipPath)) return true;
+  // A real text box is never a 1px dot. Radios, checkboxes and file inputs are often restyled that way, and are
+  // judged by their label instead (see controlVisible in scan.ts).
+  if (el instanceof HTMLInputElement) {
+    if (!["radio", "checkbox", "file", "hidden", "submit", "button", "image", "reset"].includes(el.type) && (r.width <= 2 || r.height <= 2)) return true;
+  } else if ((el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement) && (r.width <= 2 || r.height <= 2)) return true;
+  return false;
 }
 
 export function collapse(s: string | null | undefined, max = 300): string {

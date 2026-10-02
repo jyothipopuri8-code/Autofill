@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Software Engineer - Umbrella Corp Careers</title>
+  <meta property="og:site_name" content="Umbrella Corp">
+  <style>body{font:15px system-ui;max-width:760px;margin:24px auto;padding:0 16px}label{display:block;margin-top:10px;font-weight:600}input[type=text],select,textarea{width:100%;padding:6px}.entry{border:1px solid #ccc;padding:6px 12px 12px;margin:10px 0;border-radius:6px}</style>
+</head>
+<body>
+  <h1>Software Engineer</h1>
+  <p>Umbrella Corp builds resilient infrastructure software. This role designs and operates services used by thousands of teams across the company and its customers.</p>
+  <form id="app" novalidate>
+    <h2>Your details</h2>
+    <label for="fn">First name</label><input id="fn" type="text">
+    <label for="ln">Last name</label><input id="ln" type="text">
+
+    <h2>Work Experience</h2>
+    <div id="exp-list"></div>
+    <button type="button" id="add-exp">Add Another Position</button>
+
+    <h2>Education</h2>
+    <div id="edu-list"></div>
+    <button type="button" id="add-edu">Add Education</button>
+
+    <h2>Certifications</h2>
+    <div id="cert-list"></div>
+    <button type="button" id="add-cert">Add certification</button>
+
+    <h2>Languages</h2>
+    <div id="lang-list"></div>
+    <button type="button" id="add-lang">Add language</button>
+
+    <h2>Documents</h2>
+    <label for="resume">Resume</label><input id="resume" type="file">
+    <p><button type="submit" id="submit">Submit Application</button></p>
+  </form>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("app").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    const n = { exp: 0, edu: 0, cert: 0, lang: 0 };
+    const T = {
+      exp: (i) => `<div class="entry"><label for="jt${i}">Job title</label><input id="jt${i}" type="text">
+        <label for="co${i}">Company</label><input id="co${i}" type="text">
+        <label for="sd${i}">Start date</label><input id="sd${i}" type="text" placeholder="MM/YYYY">
+        <label for="ed${i}">End date</label><input id="ed${i}" type="text" placeholder="MM/YYYY">
+        <label><input id="cur${i}" type="checkbox"> I currently work here</label>
+        <label for="ds${i}">Description</label><textarea id="ds${i}"></textarea></div>`,
+      edu: (i) => `<div class="entry"><label for="sc${i}">School</label><input id="sc${i}" type="text">
+        <label for="dg${i}">Degree</label><select id="dg${i}"><option value="">Select...</option><option>High School</option><option>Associate's Degree</option><option>Bachelor's Degree</option><option>Master's Degree</option><option>Doctorate</option></select>
+        <label for="fs${i}">Field of study</label><input id="fs${i}" type="text">
+        <label for="gd${i}">Graduation date</label><input id="gd${i}" type="text" placeholder="MM/YYYY"></div>`,
+      cert: (i) => `<div class="entry"><label for="cn${i}">Certification name</label><input id="cn${i}" type="text">
+        <label for="ci${i}">Issued date</label><input id="ci${i}" type="text" placeholder="MM/YYYY"></div>`,
+      lang: (i) => `<div class="entry"><label for="ln_${i}">Language</label><input id="ln_${i}" type="text">
+        <label for="lp${i}">Proficiency</label><select id="lp${i}"><option value="">Select...</option><option>Basic</option><option>Conversational</option><option>Professional</option><option>Native</option></select></div>`,
+    };
+    function add(kind) { n[kind]++; document.getElementById(kind + "-list").insertAdjacentHTML("beforeend", T[kind](n[kind])); }
+    for (const k of Object.keys(T)) { add(k); document.getElementById("add-" + k).addEventListener("click", () => add(k)); }
+  </script>
+</body>
+</html>

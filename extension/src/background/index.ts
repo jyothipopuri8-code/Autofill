@@ -1,25 +1,9 @@
 // Service worker: the only place that talks to the local agent. It holds the install token,
 // restricts which API calls the page-side script may make, and keeps per-tab session state.
 import type { ApiRequest, ApiResponse, TabState } from "../shared/types";
+import { allowed } from "./allowlist";
 
 const BASE = "http://127.0.0.1:8765";
-
-// Content scripts run next to untrusted pages, so they get an allow-list rather than a general proxy.
-const ALLOWED: Array<[RegExp, string[]]> = [
-  [/^\/api\/v1\/status$/, ["GET"]],
-  [/^\/api\/v1\/settings$/, ["GET"]],
-  [/^\/api\/v1\/resumes$/, ["GET"]],
-  [/^\/api\/v1\/sessions$/, ["GET", "POST"]],
-  [/^\/api\/v1\/sessions\?[A-Za-z0-9_=&%.:/-]*$/, ["GET"]],
-  [/^\/api\/v1\/sessions\/\d+$/, ["GET", "PATCH"]],
-  [/^\/api\/v1\/sessions\/\d+\/(analyze|answers|fill-report|validate|resume|conflicts\/resolve)$/, ["POST"]],
-  [/^\/api\/v1\/sessions\/\d+\/(attention|final-review|resume-file)$/, ["GET"]],
-  [/^\/api\/v1\/applications\/\d+$/, ["GET", "PATCH"]],
-];
-
-function allowed(method: string, path: string): boolean {
-  return ALLOWED.some(([re, methods]) => re.test(path) && methods.includes(method));
-}
 
 async function token(): Promise<string> {
   const { token } = await chrome.storage.local.get("token");
@@ -34,6 +18,7 @@ function b64(buf: ArrayBuffer): string {
 }
 
 export async function callApi(req: { method: string; path: string; body?: unknown; binary?: boolean }, bypassAllowList = false): Promise<ApiResponse> {
+  if (typeof req?.path !== "string" || typeof req?.method !== "string" || req.path.length > 400) return { ok: false, status: 0, data: null, error: "Request not permitted" };
   if (!bypassAllowList && !allowed(req.method, req.path)) return { ok: false, status: 0, data: null, error: "Request not permitted" };
   const t = await token();
   if (!t) return { ok: false, status: 401, data: null, error: "Not connected: add your installation token in the extension popup" };
