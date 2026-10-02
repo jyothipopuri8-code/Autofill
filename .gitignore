@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Node
+node_modules/
+extension/dist/
+
+# Local data: never commit personal information or resumes
+data/
+*.db
+*.sqlite3
+install_token
+logs/
+
+.env
+.DS_Store
