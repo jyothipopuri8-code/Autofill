@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Autofill Agent",
+  "version": "0.1.0",
+  "description": "Fills job applications from your local Autofill Agent. Never submits for you.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyMAbrPDxNGN1JirZjbGe/qZBoFTmGQb+ALyvtvDBMmHxQtYXQIIMJi8sCe3x89PYRHv/1LOBYwZXDKVWzoqat0YZ36nPyNOKK6Xdzg8z+Zh0oJMTOavHJlLeTcnk2qSzzRUOZinFXNzbNXVMnYtOUFBlwlZ+b8475UAtTC1KtEqgzQLcLB8GAriwHliTt9N66xGgrGNuW/gS+ZvH//gKyqb7DuZiJHMmP/aalBVIvxlpMCau3ndHuBW+X/ZsHWFKPPJmA/Tp93jixyKVQcHe2BkS0bDzgsCgpAD2FG2n/2ZYC1s1V7E8a1yJElOg/y9y4l8oKZ9/tzq1UkmPRaQJLQIDAQAB",
+  "minimum_chrome_version": "114",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "host_permissions": ["http://127.0.0.1:8765/*"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Autofill Agent", "default_popup": "popup.html" },
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'; base-uri 'none'" }
+}

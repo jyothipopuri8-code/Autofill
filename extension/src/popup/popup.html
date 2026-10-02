@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Autofill Agent</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h1>Autofill Agent</h1>
+  <p id="status" class="status">Checking the agent…</p>
+
+  <section id="pair" hidden>
+    <p>Connect the extension to your local agent. On your computer, run:</p>
+    <pre>python -m autofill_agent token</pre>
+    <p>and paste the result here. It stays on this computer.</p>
+    <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="Installation token">
+    <button id="connect" class="pri">Connect</button>
+  </section>
+
+  <section id="main" hidden>
+    <button id="start" class="pri">Start on this page</button>
+    <button id="toggle">Show or hide the panel</button>
+    <p id="startnote" class="note"></p>
+
+    <label for="mode">Mode</label>
+    <select id="mode">
+      <option value="SAFE">Safe: nothing is filled until you click Fill</option>
+      <option value="STANDARD">Standard: ready, non-sensitive fields fill automatically</option>
+      <option value="MANUAL_ASSIST">Manual assist: you insert each field yourself</option>
+    </select>
+
+    <details>
+      <summary>Sites this extension may run on</summary>
+      <ul id="sites"></ul>
+      <p class="note">You grant each site the first time you press Start on it. Remove one to revoke access.</p>
+    </details>
+
+    <div class="row">
+      <button id="open" class="ghost">Open agent</button>
+      <button id="disconnect" class="ghost">Disconnect</button>
+    </div>
+  </section>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "name": "autofill-agent-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome/Edge extension for the Local Job Application Autofill Agent",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:e2e": "node build.mjs --e2e",
+    "typecheck": "tsc --noEmit",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "esbuild": "^0.25.0",
+    "typescript": "~5.9.3"
+  }
+}

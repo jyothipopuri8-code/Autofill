@@ -2,13 +2,26 @@
 
 from __future__ import annotations
 
+import sys
+
 import uvicorn
 
 from autofill_agent.config import LOOPBACK_HOST, get_settings
 from autofill_agent.main import create_app
+from autofill_agent.security import load_or_create_token
+
+
+def print_token() -> None:
+    """``python -m autofill_agent token``: show the installation token to paste into the extension."""
+    settings = get_settings()
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    print(load_or_create_token(settings.token_path))
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "token":
+        print_token()
+        return
     settings = get_settings()
     app = create_app(settings)
     print(f"Installation token stored at: {settings.token_path}")
