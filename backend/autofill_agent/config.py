@@ -9,6 +9,7 @@ loopback interface.
 from __future__ import annotations
 
 import os
+import re
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -43,6 +44,11 @@ class Settings(BaseSettings):
 
     max_resume_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
 
+    # Optional local AI (Ollama). Off by default; the URL must be a loopback address.
+    ollama_enabled: bool = False
+    ollama_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "llama3.1"
+
     log_level: str = "INFO"
     developer_mode: bool = False
 
@@ -60,6 +66,13 @@ class Settings(BaseSettings):
             if not origin.startswith(("chrome-extension://", "extension://")) or origin.count("/") != 2:
                 raise ValueError(f"allowed origin must be a browser extension origin, got {origin!r}")
         return v
+
+    @field_validator("ollama_url")
+    @classmethod
+    def _ollama_loopback(cls, v: str) -> str:
+        if not re.match(r"^http://(127\.0\.0\.1|localhost|\[::1\])(:\d+)?/?$", v):
+            raise ValueError("ollama_url must be a local http://127.0.0.1 or http://localhost address")
+        return v.rstrip("/")
 
     @field_validator("log_level")
     @classmethod

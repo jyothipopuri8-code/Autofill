@@ -24,6 +24,14 @@ docs/        Notes and decisions
 | 6 | Resume manager API (`/api/v1/resumes`: upload, SHA-256, select, archive, integrity check, delete) | done |
 | 7 | Resume parser: PDF/DOCX text extraction and structured extraction (contact, summary, skills, experience, education, certifications, languages) | done |
 | 8 | Resume verification: correction/verify API and a local review page at `/ui/` | done |
+| 9 | Application sessions: isolated, persisted, recoverable after restart | done |
+| 12-15 | Field normalization, mapping engine, conflict detection, confidence | done (backend) |
+| 28 | Date engine (per-site date formats) | done |
+| 31 | Manual question queue (`/sessions/{id}/attention`) | done (backend) |
+| 33 | Question memory (approved answers with reuse rules) | done |
+| 34 | Custom question engine (grounded in the resume) | done |
+| 35 | Optional local AI (Ollama, off by default, grounding check) | done |
+| 38-39 | Application history and duplicate detection | done |
 
 ## Run the backend
 
@@ -53,6 +61,26 @@ Data (database, resumes, logs, install token) lives in `~/.local/share/autofill-
 | `PUT /api/v1/resumes/{id}/verified-data` | Save corrections (draft); editing a verified resume un-verifies it |
 | `POST /api/v1/resumes/{id}/verify` | Confirm the data is accurate (uses corrections, else the parse as-is) |
 | `DELETE /api/v1/resumes/{id}` | Remove record and file; application history keeps its filename/hash snapshot |
+
+### Sessions, answers and history
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/sessions` | Start an application session (409 `POSSIBLE_DUPLICATE` with matches unless `force`) |
+| `GET /api/v1/sessions[?status=&url=]` | Incomplete sessions for recovery |
+| `POST /api/v1/sessions/{id}/analyze` | Send detected fields for a page; get per-field answer, source, confidence, action |
+| `POST /api/v1/sessions/{id}/answers` | Your answer for this application (optionally remembered) |
+| `POST /api/v1/sessions/{id}/conflicts/resolve` | Choose profile, resume or a custom value when they disagree |
+| `POST /api/v1/sessions/{id}/resume` | Explicitly choose the resume after a mismatch |
+| `GET /api/v1/sessions/{id}/resume-file` | The exact verified resume (hash-checked) for attaching |
+| `POST /api/v1/sessions/{id}/fill-report`, `/validate` | Report fills; classify every field after filling |
+| `GET /api/v1/sessions/{id}/attention`, `/final-review` | "Needs your attention" queue; final completeness check |
+| `GET/PATCH/DELETE /api/v1/applications` | History; only you set final statuses |
+| `GET/PUT /api/v1/settings` | Operating mode: SAFE (default), STANDARD, MANUAL_ASSIST |
+
+Answer priority per field: your answer for this application, verified profile/library, the session's tailored resume, a previously approved answer, a deterministic calculation, an optional grounded AI draft, then ask you. Passwords, legal acknowledgements, signatures, CAPTCHAs and non-resume uploads are never filled.
+
+Optional local AI: set `AUTOFILL_OLLAMA_ENABLED=true` (and `AUTOFILL_OLLAMA_MODEL`) to draft free-text answers with a local Ollama server. Drafts only use your verified resume and the job description, are rejected if they introduce facts that are not in them, and always need your review.
 
 ## Review page
 

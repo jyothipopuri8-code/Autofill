@@ -14,7 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pathlib import Path
 
 from autofill_agent import __version__
-from autofill_agent.api import answers, health, profile, resumes
+from autofill_agent.api import answers, applications, health, profile, resumes, sessions, settings_api
 from autofill_agent.config import Settings, get_settings
 from autofill_agent.db import Database
 from autofill_agent.logging_setup import configure_logging
@@ -55,6 +55,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.db = db
     app.state.install_token = token
+    app.state.ai = None
+    if settings.ollama_enabled:
+        from autofill_agent.ai import OllamaDrafter
+
+        app.state.ai = OllamaDrafter(settings.ollama_url, settings.ollama_model)
 
     # Starlette runs the last-added middleware first: host check, then origin guard, then CORS.
     app.add_middleware(
@@ -75,6 +80,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(profile.router)
     app.include_router(answers.router)
     app.include_router(resumes.router)
+    app.include_router(sessions.router)
+    app.include_router(applications.router)
+    app.include_router(settings_api.router)
     # Static review page: no personal data in these files, all data comes via the authenticated API.
     app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "ui", html=True), name="ui")
     return app

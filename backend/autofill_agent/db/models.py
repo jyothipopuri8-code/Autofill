@@ -203,6 +203,11 @@ class ApprovedAnswer(TimestampMixin, Base):
     resume_sha256: Mapped[str | None] = mapped_column(String(64))
     profile_version: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     superseded: Mapped[bool] = mapped_column(default=False)
+    # Scope of reuse (doc §24): job-specific questions are tied to a company; resume/profile-derived
+    # answers are dropped when that resume or profile changes.
+    company: Mapped[str | None] = mapped_column(String(200))
+    depends_on_resume: Mapped[bool] = mapped_column(default=False)
+    depends_on_profile: Mapped[bool] = mapped_column(default=False)
     source_session_id: Mapped[int | None] = mapped_column(ForeignKey("application_session.id", ondelete="SET NULL"))
 
 
@@ -249,6 +254,8 @@ class ApplicationSession(TimestampMixin, Base):
     current_page_index: Mapped[int] = mapped_column(default=0)
     detected_fields: Mapped[list[Any]] = mapped_column(default=list)
     errors: Mapped[list[Any]] = mapped_column(default=list)
+    # canonical_field -> value chosen by the user for this application only (answers and conflict resolutions).
+    overrides: Mapped[dict[str, Any]] = mapped_column(default=dict)
 
     application: Mapped[Application] = relationship(back_populates="sessions")
     answers: Mapped[list[SessionAnswer]] = relationship(
@@ -283,4 +290,23 @@ class SessionAnswer(TimestampMixin, Base):
     status: Mapped[FieldStatus] = mapped_column(_enum(FieldStatus), default=FieldStatus.PENDING)
     ownership: Mapped[FieldOwnership] = mapped_column(_enum(FieldOwnership), default=FieldOwnership.EMPTY)
 
+    # Repeatable sections (work experience, education, ...) and how the engine decided to treat the field.
+    section: Mapped[str | None] = mapped_column(String(32))
+    section_index: Mapped[int | None]
+    action: Mapped[str] = mapped_column(String(16), default="ask")  # fill | review | ask | skip | keep | user_action | attach | conflict
+    reason: Mapped[str | None] = mapped_column(Text)
+    sensitive: Mapped[bool] = mapped_column(default=False)
+    band: Mapped[str | None] = mapped_column(String(16))  # READY | REVIEW | DO_NOT_FILL
+    # Full engine result for this field as last analyzed (used to validate after filling).
+    result: Mapped[dict[str, Any] | None]
+
     session: Mapped[ApplicationSession] = relationship(back_populates="answers")
+
+
+class AppSetting(Base):
+    """Small key/value store for agent settings such as the operating mode (doc §29)."""
+
+    __tablename__ = "app_setting"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[Any] = mapped_column(JSON)

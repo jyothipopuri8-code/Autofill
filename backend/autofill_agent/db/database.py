@@ -6,7 +6,7 @@ import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 
-from sqlalchemy import Engine, create_engine, event, text
+from sqlalchemy import Engine, create_engine, event, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from autofill_agent.db.models import Base
@@ -29,12 +29,30 @@ class Database:
 
     def create_all(self) -> None:
         Base.metadata.create_all(self.engine)
+        self._add_missing_columns()
         path = self.engine.url.database
         if path and path != ":memory:":
             try:
                 os.chmod(path, 0o600)
             except OSError:
                 pass
+
+    def _add_missing_columns(self) -> None:
+        """Additive upgrade for databases created by an earlier version.
+
+        ``create_all`` never alters existing tables, so columns added later are
+        appended here (always nullable; code treats NULL as the default).
+        """
+        insp = inspect(self.engine)
+        with self.engine.begin() as conn:
+            for table in Base.metadata.sorted_tables:
+                if not insp.has_table(table.name):
+                    continue
+                existing = {c["name"] for c in insp.get_columns(table.name)}
+                for col in table.columns:
+                    if col.name not in existing:
+                        ddl = col.type.compile(dialect=self.engine.dialect)
+                        conn.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {ddl}'))
 
     def ping(self) -> bool:
         try:
