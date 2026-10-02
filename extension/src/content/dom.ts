@@ -113,3 +113,26 @@ export function realClick(el: Element): void {
 export function digits(s: string | null | undefined): string {
   return (s ?? "").replace(/\D+/g, "");
 }
+
+// --- choices that are not <input>s: role=radio, and buttons used as toggles (Yes / No) ---------------------------
+
+const ON_CLASS = /(^|[\s_-])(selected|active|checked|pressed|chosen)($|[\s_-])/i;
+const ON_STATE = /^(on|checked|active|selected|true)$/i;
+
+/** Whether a choice element shows as picked, from ARIA state first, then the data-state / class conventions sites use. */
+export function choiceOn(m: HTMLElement): boolean {
+  if (m instanceof HTMLInputElement) return m.checked;
+  for (const a of ["aria-checked", "aria-pressed", "aria-selected", "data-checked", "data-selected", "data-active"]) {
+    const v = m.getAttribute(a);
+    if (v !== null) return v === "true" || v === "";
+  }
+  const st = m.getAttribute("data-state");
+  if (st !== null) return ON_STATE.test(st);
+  return typeof m.className === "string" && ON_CLASS.test(m.className);
+}
+
+/** The value a choice element stands for: its value / data-value, else its visible text. */
+export function choiceValue(m: HTMLElement): string {
+  if (m instanceof HTMLInputElement) return m.value;
+  return m.getAttribute("data-value") || m.getAttribute("value") || collapse(m.textContent, 100);
+}

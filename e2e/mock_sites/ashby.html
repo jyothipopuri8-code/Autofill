@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Senior Security Engineer @ Dendrite</title>
+  <meta property="og:site_name" content="Dendrite">
+  <!-- Modelled on Ashby's hosted application form (CSS-module class names, one Name field, Yes/No rendered as
+       plain buttons, a hidden file input behind an Upload button). Built from memory of the real markup. -->
+  <style>
+    body{font:15px system-ui;max-width:680px;margin:24px auto;padding:0 16px}
+    ._entry_1{margin:16px 0}._heading_1{display:block;font-weight:600;margin-bottom:6px}
+    ._input_1{width:100%;padding:8px;box-sizing:border-box}
+    ._yesno_1{display:flex;gap:8px}._option_1{padding:8px 18px;border:1px solid #888;background:#fff;border-radius:6px;cursor:pointer}
+    ._option_1._active_1{background:#2557d6;color:#fff}
+  </style>
+</head>
+<body>
+  <div class="ashby-job-posting-heading"><h1>Senior Security Engineer</h1></div>
+  <p>Dendrite builds secure infrastructure software. As a Senior Security Engineer you will lead threat modelling, review designs and help teams ship safely. You will partner with engineering, respond to incidents and mentor other engineers.</p>
+  <div class="ashby-application-form-container">
+    <form id="form">
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1 _required_1" for="_systemfield_name">Name</label>
+        <input id="_systemfield_name" name="_systemfield_name" class="_input_1" type="text" required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1 _required_1" for="_systemfield_email">Email</label>
+        <input id="_systemfield_email" name="_systemfield_email" class="_input_1" type="email" required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1 _required_1" for="_systemfield_resume">Resume</label>
+        <div><button type="button" id="upload" class="_option_1">Upload File</button><span id="fname"></span>
+          <input id="_systemfield_resume" name="_systemfield_resume" type="file" style="display:none"></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="phone">Phone number</label>
+        <input id="phone" name="phone" class="_input_1" type="tel">
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="linkedin">LinkedIn Profile</label>
+        <input id="linkedin" name="linkedin" class="_input_1" type="text">
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="q-auth">
+        <label class="ashby-application-form-question-title _heading_1 _required_1">Are you legally authorized to work in the United States?</label>
+        <div class="_yesno_1"><button type="button" class="_option_1">Yes</button><button type="button" class="_option_1">No</button></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="q-sponsor">
+        <label class="ashby-application-form-question-title _heading_1 _required_1">Will you now or in the future require sponsorship for employment visa status?</label>
+        <div class="_yesno_1"><button type="button" class="_option_1">Yes</button><button type="button" class="_option_1">No</button></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="q-relocate">
+        <label class="ashby-application-form-question-title _heading_1">Are you willing to relocate?</label>
+        <div class="_yesno_1"><button type="button" class="_option_1">Yes</button><button type="button" class="_option_1">No</button></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1 _required_1" for="why">Why do you want to work at Dendrite?</label>
+        <textarea id="why" name="why" class="_input_1" required></textarea>
+      </div>
+      <button type="submit" id="submit" class="_option_1">Submit Application</button>
+    </form>
+  </div>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    // Yes/No buttons behave like a radio pair: the clicked one gets the active class, its sibling loses it.
+    document.querySelectorAll("._yesno_1").forEach((g) => g.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      g.querySelectorAll("button").forEach((x) => x.classList.toggle("_active_1", x === b));
+    }));
+    document.getElementById("upload").addEventListener("click", () => document.getElementById("_systemfield_resume").click());
+    document.getElementById("_systemfield_resume").addEventListener("change", (e) => { document.getElementById("fname").textContent = e.target.files[0]?.name || ""; });
+    window.__answers = () => Object.fromEntries(["q-auth", "q-sponsor", "q-relocate"].map((id) => [id, document.querySelector(`#${id} ._active_1`)?.textContent ?? null]));
+  </script>
+</body>
+</html>

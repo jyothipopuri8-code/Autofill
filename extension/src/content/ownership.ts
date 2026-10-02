@@ -43,6 +43,9 @@ export class OwnershipTracker {
         const host = t.closest("[role='combobox'],[aria-haspopup]");
         if (host) this.noteUserEdit(host);
       }
+      // Toggle buttons and role=radio choices fire no input/change event, so the click itself is the edit.
+      const choice = t?.closest("button,[role='radio']");
+      if (choice) this.noteUserEdit(choice);
     }, true);
   }
 

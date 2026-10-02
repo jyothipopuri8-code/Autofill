@@ -154,3 +154,35 @@ def test_repeatable_sections_experience_education_certifications_languages(sessi
     assert [page.input_value("#lp1"), page.input_value("#lp2")] == ["Native", "Professional"] and page.input_value("#lp3") == ""
     assert page.evaluate("document.getElementById('resume').files[0]?.name") == "Jane.pdf"
     assert page.evaluate("window.__submitClicks") == 0
+
+
+def test_ashby_like_page_yes_no_buttons_and_single_name_field(session, agent):
+    s = session("ashby.html")
+    fill_all(s)
+    page = s.page
+    app = agent.api("GET", "/api/v1/sessions").json()[0]["application"]
+    assert app["ats"] == "ASHBY" and "Senior Security Engineer" in app["job_title"]
+    assert page.input_value("#_systemfield_name") == "Jane Doe"
+    assert page.input_value("#_systemfield_email") == "jane.doe@example.com"
+    assert page.evaluate("document.getElementById('_systemfield_resume').files[0]?.name") == "Jane.pdf"
+    assert page.input_value("#linkedin") == "https://linkedin.com/in/janedoe"
+    # Buttons that act as Yes / No: the two work-authorization questions are answered from the profile,
+    # the optional relocation question is not something the profile knows, so it is left alone, and the
+    # required free-text question is listed for the person.
+    answers = page.evaluate("window.__answers()")
+    assert answers["q-auth"] == "Yes" and answers["q-sponsor"] == "No" and answers["q-relocate"] is None
+    assert "Why do you want to work at Dendrite?" in s.panel_text()
+    assert page.input_value("#why") == ""
+    assert page.evaluate("window.__submitClicks") == 0
+
+
+def test_ashby_like_yes_no_choice_made_by_the_person_is_kept(session, agent):
+    s = session("ashby.html")
+    s.start()
+    s.wait_ready()
+    s.page.locator("#q-auth button", has_text="No").click()  # a real click by the person
+    s.click("Rescan page")
+    s.wait_ready()
+    s.click("Fill")
+    s.wait_filled()
+    assert s.page.evaluate("window.__answers()")["q-auth"] == "No"

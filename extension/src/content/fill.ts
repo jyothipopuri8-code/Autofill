@@ -1,7 +1,7 @@
 // Put values into the page the way a person would, then check they stuck (doc §17, §20, §22, §28).
 // Never clicks next/submit, never touches password or CAPTCHA fields, never overwrites what the user typed.
 import type { FieldResult } from "../shared/types";
-import { collapse, digits, fire, fireInput, norm, realClick, setNativeValue, sleep, waitFor } from "./dom";
+import { choiceOn, choiceValue, collapse, digits, fire, fireInput, norm, realClick, setNativeValue, sleep, waitFor } from "./dom";
 import { OwnershipTracker, UndoEntry } from "./ownership";
 import { Control, customCurrent } from "./scan";
 
@@ -33,8 +33,8 @@ export function readValue(c: Control): string {
   switch (d.kind) {
     case "select": return (el as HTMLSelectElement).value;
     case "radio_group": {
-      const on = c.members.find((m) => (m as HTMLInputElement).checked || m.getAttribute("aria-checked") === "true");
-      return on ? ((on as HTMLInputElement).value ?? on.getAttribute("data-value") ?? collapse(on.textContent, 100)) : "";
+      const on = c.members.find(choiceOn);
+      return on ? choiceValue(on) : "";
     }
     case "checkbox": return (el as HTMLInputElement).checked ? "true" : "false";
     case "checkbox_group": return c.members.filter((m) => (m as HTMLInputElement).checked).map((m) => (m as HTMLInputElement).value).join(",");
@@ -91,7 +91,7 @@ function fillSelect(c: Control, r: FieldResult): boolean {
   return el.value === hit.value;
 }
 
-function fillRadio(c: Control, r: FieldResult): boolean {
+async function fillRadio(c: Control, r: FieldResult): Promise<boolean> {
   const want = r.option;
   if (!want) return false;
   const label = (m: HTMLElement) => norm(m instanceof HTMLInputElement ? optionLabelOf(m) : m.getAttribute("aria-label") || m.textContent);
@@ -102,8 +102,11 @@ function fillRadio(c: Control, r: FieldResult): boolean {
     if (!hit.checked) hit.click();
     return hit.checked;
   }
-  if (hit.getAttribute("aria-checked") !== "true") hit.click();
-  return hit.getAttribute("aria-checked") === "true";
+  // role=radio and toggle buttons: click, then read the page's own state (frameworks may re-render a tick later).
+  if (!choiceOn(hit)) hit.click();
+  if (choiceOn(hit)) return true;
+  await sleep(80);
+  return choiceOn(hit);
 }
 
 function optionLabelOf(m: HTMLInputElement): string {
@@ -261,7 +264,7 @@ export async function fillControl(c: Control, r: FieldResult, env: FillEnv, expe
       ok = fillSelect(c, r);
       if (!ok) error = "No matching option in the list";
     } else if (kind === "radio_group") {
-      ok = fillRadio(c, r);
+      ok = await fillRadio(c, r);
       if (!ok) error = "Could not select that option";
     } else if (kind === "checkbox") {
       ok = fillCheckbox(c, r);
@@ -301,8 +304,8 @@ async function restore(c: Control, previous: string, tracker: OwnershipTracker):
     switch (d.kind) {
       case "radio_group": {
         // Radios cannot be unchecked directly; restore a previously checked member, otherwise report that we could not.
-        const prev = c.members.find((m) => (m as HTMLInputElement).value === previous);
-        if (previous && prev) { (prev as HTMLInputElement).click(); return true; }
+        const prev = c.members.find((m) => choiceValue(m) === previous);
+        if (previous && prev) { prev.click(); return true; }
         return false;
       }
       case "checkbox": {

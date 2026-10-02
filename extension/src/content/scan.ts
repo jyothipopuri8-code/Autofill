@@ -2,7 +2,7 @@
 // reported as one field. Open shadow roots are searched; closed ones and cross-origin iframes are not.
 import type { FieldDescriptor, Kind, Option } from "../shared/types";
 import type { Adapter } from "./adapters/base";
-import { cleanLabel, collapse, hash, isVisible, norm, ownText } from "./dom";
+import { choiceOn, choiceValue, cleanLabel, collapse, hash, isVisible, norm, ownText } from "./dom";
 import { labelInfo, looksRequired, optionLabel } from "./labels";
 import { OwnershipTracker } from "./ownership";
 import { assignSections, HEADING_SELECTOR, isHeadingEl } from "./sections";
@@ -189,6 +189,9 @@ export class Scanner {
       addControl(el, this.single(el, "custom_select"));
     }
 
+    // Buttons used as a pick-one toggle (Yes / No), which carry no radio semantics at all.
+    for (const buttons of this.toggleGroups(doc)) addControl(buttons[0], this.toggleGroup(buttons), buttons);
+
     // CAPTCHA widgets: reported so the agent can ask the user to complete them (doc §36).
     let n = 0;
     for (const cap of deepAll(doc, CAPTCHA_SEL).filter((e) => !inOwnUi(e) && (e.tagName === "IFRAME" || !e.querySelector(CAPTCHA_SEL)))) {
@@ -201,7 +204,7 @@ export class Scanner {
     }
 
     // Sections need headings and fields in document order.
-    const orderEls = deepAll(doc, `${HEADING_SELECTOR},${CONTROL_SEL},[role=radio]`).filter((e) => !inOwnUi(e));
+    const orderEls = deepAll(doc, `${HEADING_SELECTOR},${CONTROL_SEL},[role=radio],button`).filter((e) => !inOwnUi(e));
     const order: HTMLElement[] = [];
     for (const e of orderEls) {
       if (entryByEl.has(e) || (isHeadingEl(e) && !entryByEl.has(e))) order.push(e);
@@ -303,12 +306,63 @@ export class Scanner {
       : group.getAttribute("aria-label")) || null;
     d.nearby_text = labelInfo(radios[0], true).nearby_text;
     d.label = d.legend ? cleanLabel(d.legend) : d.nearby_text;
-    d.options = radios.map((r) => ({ value: r.getAttribute("data-value") || r.getAttribute("value") || collapse(r.textContent, 100), label: collapse(r.textContent || r.getAttribute("aria-label"), 200) }));
+    d.options = radios.map((r) => ({ value: choiceValue(r), label: collapse(r.textContent || r.getAttribute("aria-label"), 200) }));
     d.required = group.getAttribute("aria-required") === "true" || looksRequired(group, d.legend || "");
     d.visible = isVisible(group);
-    const on = radios.filter((r) => r.getAttribute("aria-checked") === "true");
+    const on = radios.filter(choiceOn);
     d.current_value = on.length ? collapse(on[0].textContent, 200) : null;
     this.setOwnership(radios[0], d, on.length > 0, radios);
+    return d;
+  }
+
+  /**
+   * Sibling <button>s that work as one pick-one question. Deliberately strict, because a wrong guess would put a
+   * click on something that is not a question: 2-6 short plain buttons that are the parent's only children, no
+   * navigation or action wording, and either ARIA pressed state or exactly a Yes / No pair.
+   */
+  private toggleGroups(doc: Document): HTMLElement[][] {
+    const NOT_A_CHOICE = /^(next|back|previous|prev|continue|submit|apply|save|cancel|close|add|remove|delete|upload|attach|browse|edit|clear|reset|done|sign|log|search|menu|more|show|hide|accept|reject|decline all|dismiss|ok|okay)\b/i;
+    const parents = new Map<HTMLElement, HTMLElement[]>();
+    for (const b of deepAll(doc, "button")) {
+      if (inOwnUi(b) || !b.parentElement) continue;
+      if (b.hasAttribute("aria-haspopup") || b.hasAttribute("aria-expanded") || b.hasAttribute("aria-controls")) continue;
+      if (["radio", "option", "tab", "menuitem", "combobox", "checkbox", "switch"].includes(b.getAttribute("role") || "")) continue;
+      const list = parents.get(b.parentElement) ?? [];
+      list.push(b);
+      parents.set(b.parentElement, list);
+    }
+    const out: HTMLElement[][] = [];
+    for (const [parent, buttons] of parents) {
+      if (buttons.length < 2 || buttons.length > 6 || parent.children.length !== buttons.length) continue;
+      if (parent.closest("nav,header,footer,[role=toolbar],[role=tablist],[role=dialog],[role=alertdialog],dialog")) continue;
+      const texts = buttons.map((b) => collapse(b.textContent, 60));
+      if (texts.some((x) => !x || x.length > 40 || NOT_A_CHOICE.test(x))) continue;
+      if (buttons.some((b) => b.querySelector("input,select,textarea,button") || (b as HTMLButtonElement).type === "submit")) continue;
+      if (new Set(texts.map(norm)).size !== texts.length) continue;
+      const yesNo = buttons.length === 2 && new Set(texts.map(norm)).size === 2 && texts.every((x) => /^(yes|no)$/i.test(x));
+      const pressed = buttons.every((b) => b.hasAttribute("aria-pressed"));
+      if (!yesNo && !pressed) continue;
+      if (!buttons.some(isVisible)) continue;
+      out.push(buttons);
+    }
+    return out;
+  }
+
+  private toggleGroup(buttons: HTMLElement[]): FieldDescriptor {
+    const parent = buttons[0].parentElement!;
+    const d = this.blank("radio_group", buttons[0]);
+    d.id = null; d.name = null; d.autocomplete = null; d.input_type = null;
+    const info = labelInfo(parent, true);
+    d.legend = info.legend;
+    d.nearby_text = info.nearby_text;
+    d.label = info.legend || info.nearby_text || null;
+    d.options = buttons.map((b) => ({ value: choiceValue(b), label: collapse(b.textContent, 200) }));
+    d.required = looksRequired(parent, `${d.label ?? ""} ${parent.parentElement?.querySelector(":scope > [class*='required' i]") ? "required" : ""}`);
+    d.visible = buttons.some((b) => isVisible(b));
+    d.disabled = buttons.every((b) => (b as HTMLButtonElement).disabled);
+    const on = buttons.filter(choiceOn);
+    d.current_value = on.length ? collapse(on[0].textContent, 200) : null;
+    this.setOwnership(buttons[0], d, on.length > 0, buttons);
     return d;
   }
 
