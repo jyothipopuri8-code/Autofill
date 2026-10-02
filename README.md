@@ -7,43 +7,65 @@ See the design doc in the project thread for the full spec and 43-phase roadmap.
 ## Layout
 
 ```
-backend/     FastAPI localhost agent (Python 3.11+), SQLite storage
-extension/   Chrome/Edge Manifest V3 extension (TypeScript), Phase 10+
-docs/        Notes and decisions
+backend/     FastAPI localhost agent (Python 3.11+), SQLite storage, review dashboard at /ui/
+extension/   Chrome/Edge Manifest V3 extension (TypeScript)
+e2e/         Browser tests: real Chromium + the built extension + mock ATS sites
+scripts/     Install / start scripts (scripts/windows/ for PowerShell)
+packaging/   PyInstaller spec for a standalone agent
+docs/        SECURITY.md, WINDOWS.md, VALIDATION.md (real-site checklist)
 ```
 
 ## Status
 
 | Phase | Scope | State |
 |---|---|---|
-| 1 | Repo structure, tooling | done |
-| 2 | FastAPI backend, 127.0.0.1 binding, health, config, logging, token auth | done |
-| 3 | SQLite models: profile, sensitive prefs, resume, library/approved answers, application, session, session answers | done |
-| 4 | Profile manager API (`/api/v1/profile`, sensitive-field policies) | done |
-| 5 | Answer library API (`/api/v1/answers`) | done |
-| 6 | Resume manager API (`/api/v1/resumes`: upload, SHA-256, select, archive, integrity check, delete) | done |
-| 7 | Resume parser: PDF/DOCX text extraction and structured extraction (contact, summary, skills, experience, education, certifications, languages) | done |
-| 8 | Resume verification: correction/verify API and a local review page at `/ui/` | done |
-| 9 | Application sessions: isolated, persisted, recoverable after restart | done |
-| 12-15 | Field normalization, mapping engine, conflict detection, confidence | done (backend) |
-| 28 | Date engine (per-site date formats) | done |
-| 31 | Manual question queue (`/sessions/{id}/attention`) | done (backend) |
-| 33 | Question memory (approved answers with reuse rules) | done |
-| 34 | Custom question engine (grounded in the resume) | done |
-| 35 | Optional local AI (Ollama, off by default, grounding check) | done |
+| 1-3 | Repo, FastAPI localhost agent with token auth, SQLite models | done |
+| 4-6 | Profile, answer library, resume manager APIs | done |
+| 7-8 | Resume parser and verification (dashboard at `/ui/`) | done |
+| 9 | Application sessions (isolated, persisted, recoverable) | done |
+| 10-11 | Extension foundation, per-site permissions, field detection | done |
+| 12-15 | Normalization, deterministic mapping, conflict detection, confidence bands | done |
+| 16-21 | Preview panel, basic and advanced autofill, manual-input protection, undo, validation | done |
+| 22-24 | Generic, Greenhouse and Lever adapters | done |
+| 25-27 | Repeatable sections: work experience, education, certifications, languages | done |
+| 28-35 | Date engine, manual question queue, question memory, custom question engine, optional local AI | done |
+| 36-37 | Workday, Ashby, iCIMS and SmartRecruiters adapters | done against mock pages only |
 | 38-39 | Application history and duplicate detection | done |
+| 40 | Security hardening ([docs/SECURITY.md](docs/SECURITY.md)) | done |
+| 41 | Testing: backend, extension unit, browser end-to-end | done (see below) |
+| 42 | Windows packaging ([docs/WINDOWS.md](docs/WINDOWS.md)) | written; **not yet run on real Windows** |
+| 43 | Real-site validation ([docs/VALIDATION.md](docs/VALIDATION.md)) | **needs you**: a checklist to run on real sites |
 
-## Run the backend
+The ATS adapters are validated against mock pages that imitate each system. Real sites differ, so expect to find issues in Phase 43.
+
+## Quick start
+
+Needs Python 3.11+ and Node.js 20+.
 
 ```bash
-cd backend
-python3 -m venv .venv && . .venv/bin/activate
-pip install -e ".[dev]"
-python -m autofill_agent          # listens on 127.0.0.1:8765
-pytest
+scripts/install.sh            # Windows: scripts\windows\install.ps1
+scripts/start-agent.sh        # Windows: scripts\windows\start-agent.bat    (listens on 127.0.0.1:8765)
 ```
 
+1. Open `chrome://extensions` (or `edge://extensions`), turn on Developer mode, **Load unpacked**, pick `extension/dist`.
+2. Print the pairing token with `python -m autofill_agent token` (inside `.venv`) and paste it into the extension popup. `token --rotate` replaces it.
+3. Open <http://127.0.0.1:8765/ui/>: upload your resume, **Parse**, correct anything wrong, **Verify**; fill in your profile.
+4. Open a job application page, click the extension icon, allow the site, and use the panel that appears. Pick the mode in the popup:
+   **Safe** (default: nothing is filled until you click Fill), **Standard** (ready, non-sensitive fields fill automatically) or **Manual assist** (one field per click).
+
+The agent never submits an application, never ticks legal or consent boxes, never fills passwords or CAPTCHAs, and sends nothing off your computer.
+
 Data (database, resumes, logs, install token) lives in `~/.local/share/autofill-agent` (Windows: `%LOCALAPPDATA%\AutofillAgent`). Override with `AUTOFILL_DATA_DIR`.
+
+## Tests
+
+```bash
+cd backend && pip install -e ".[dev]" && pytest          # API, engine, security audit
+cd extension && npm ci && npm run typecheck && npm test   # TypeScript + allow-list unit tests
+cd extension && npm run build:e2e && cd ../e2e && pip install -r requirements.txt && pytest   # real Chromium
+```
+
+CI (`.github/workflows/ci.yml`) runs all of these, plus the Windows scripts on a Windows runner (informational).
 
 ## API (all endpoints except `/health` need `Authorization: Bearer <install token>`)
 
@@ -97,6 +119,7 @@ Parsing is deterministic and offline (pypdf for PDF, defusedxml for DOCX). It is
 - Requests with a non-registered `Origin` get 403; CORS only for `AUTOFILL_ALLOWED_ORIGINS` (extension origins only); `Host` allow-list against DNS rebinding.
 - Strict response headers (CSP, nosniff, no-store); API docs disabled unless `AUTOFILL_DEVELOPER_MODE=true`.
 - Log redaction of emails, phones, SSNs and tokens.
+- Full threat model, extension allow-list and known limits: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Data-model notes
 

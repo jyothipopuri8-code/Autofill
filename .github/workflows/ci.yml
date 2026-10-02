@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Windows is informational until the project has been run on a real Windows machine.
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - run: python -m pip install -e "backend[dev]"
+      - run: python -m pytest -q
+        working-directory: backend
+
+  extension:
+    name: Extension (typecheck, unit tests, build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+        working-directory: extension
+      - run: npm run typecheck
+        working-directory: extension
+      - run: npm test
+        working-directory: extension
+      - run: npm run build
+        working-directory: extension
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist
+          path: extension/dist
+          if-no-files-found: error
+
+  e2e:
+    name: Browser end-to-end (real Chromium + built extension)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: python -m pip install -e "backend[dev]" -r e2e/requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: npm ci && npm run build:e2e
+        working-directory: extension
+      - run: python -m pytest -q
+        working-directory: e2e
+
+  windows-packaging:
+    name: Windows scripts (install, extension zip, standalone agent)
+    runs-on: windows-latest
+    # Informational: this is the only place the PowerShell scripts run on real Windows so far.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: install.ps1
+        shell: pwsh
+        run: scripts/windows/install.ps1
+      - name: package.ps1 -Exe
+        shell: pwsh
+        run: scripts/windows/package.ps1 -Exe
+      - name: Standalone agent starts and answers on 127.0.0.1
+        shell: pwsh
+        run: |
+          $env:AUTOFILL_DATA_DIR = Join-Path $env:RUNNER_TEMP "agent-data"
+          $p = Start-Process -FilePath "release\dist\autofill-agent\autofill-agent.exe" -PassThru -WindowStyle Hidden
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 40 -and -not $ok; $i++) {
+              Start-Sleep -Milliseconds 500
+              try { $ok = (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/api/v1/health).StatusCode -eq 200 } catch { }
+            }
+            if (-not $ok) { throw "the standalone agent did not answer" }
+            $ui = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/ui/
+            if ($ui.StatusCode -ne 200) { throw "the review page was not served" }
+          } finally { Stop-Process -Id $p.Id -Force }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: release/*.zip
