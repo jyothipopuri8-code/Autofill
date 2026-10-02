@@ -152,7 +152,9 @@ def classify(d: FieldDescriptor, ats: str | None = None) -> Match:
     in_section = d.section.name if d.section else None
     scored: list[tuple[float, int, Spec, list[str]]] = []
     for order, spec in enumerate(SPECS):
-        if spec.section != in_section:
+        # Inside a repeatable section only that section's fields apply, except documents and legal
+        # statements, which can follow an education/experience block without a heading of their own.
+        if spec.section != in_section and not (in_section and spec.section is None and spec.category in ("file", "legal", "security")):
             continue
         score, signals = _score_spec(spec, d, ats)
         if score > 0:

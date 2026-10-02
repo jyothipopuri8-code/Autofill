@@ -97,6 +97,14 @@ export function customCurrent(el: HTMLElement): string {
       const sv = p.querySelector("[class*='singleValue' i],[class*='single-value' i],[class*='selected-value' i]");
       if (sv && sv.textContent) return collapse(sv.textContent, 300);
     }
+    // Otherwise whatever text the control shows besides its placeholder and open menu.
+    const ctl = el.closest("[class*='control' i]") ?? el.parentElement;
+    if (ctl) {
+      const clone = ctl.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll("input,select,button,svg,[role=listbox],[class*='placeholder' i]").forEach((n) => n.remove());
+      const t = collapse(clone.textContent, 300);
+      if (t && !PLACEHOLDER_TEXT.test(t)) return t;
+    }
     return "";
   }
   const t = collapse(el.getAttribute("aria-valuetext") || el.textContent, 300);
@@ -104,6 +112,9 @@ export function customCurrent(el: HTMLElement): string {
 }
 
 export class Scanner {
+  /** Options read from custom dropdowns the first time we had to open them (keyed by field key). */
+  harvested = new Map<string, Option[]>();
+
   constructor(private adapter: Adapter, private tracker: OwnershipTracker) {}
 
   scan(doc: Document): ScanResult {
@@ -120,6 +131,10 @@ export class Scanner {
       const n = keyCount.get(base) ?? 0;
       keyCount.set(base, n + 1);
       d.key = n ? `${base}#${n}` : base;
+      if (d.kind === "custom_select" && !d.options.length) {
+        const known = this.harvested.get(d.key);
+        if (known) d.options = known;
+      }
       this.adapter.decorate(el, d);
       controls.push({ key: d.key, d, el, members });
       entryByEl.set(el, d);

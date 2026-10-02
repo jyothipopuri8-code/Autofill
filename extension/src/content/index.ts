@@ -64,7 +64,8 @@ class Agent {
   private pendingResumeLabel: string | undefined;
   private observer: MutationObserver | null = null;
   private debounce = 0;
-  private forceCreate = false;
+  private navTimer = 0;
+  private carry = { ok: 0, failed: 0 }; // fill results from earlier passes of the same click
 
   constructor() {
     this.tracker.attach(document);
@@ -179,6 +180,7 @@ class Agent {
     this.scan = this.scanner.scan(document);
     this.lastKeys = new Set(this.scan.controls.map((c) => c.key));
     const fields = this.scan.controls.map((c) => c.d).slice(0, MAX_FIELDS);
+    if (__E2E__) console.debug("[afa] analyze page", this.pageIndex, JSON.stringify(fields));
     const res = await api("POST", `/api/v1/sessions/${this.sessionId}/analyze`, { page_index: this.pageIndex, url: location.href, ats: this.adapter.id, fields });
     if (!res.ok) { this.fail(errorText(res)); return false; }
     const a = res.data as AnalyzeResponse;
@@ -223,8 +225,11 @@ class Agent {
   }
 
   /** Fill the given keys, or every ready non-sensitive field. Dependent fields that appear are handled in later rounds. */
-  private async fill(keys: string[] | undefined, overwrite: boolean, auto = false): Promise<void> {
+  private async fill(keys: string[] | undefined, overwrite: boolean, auto = false, retried = false): Promise<void> {
     if (this.sessionId === null || !this.scan) return;
+    // Never fill from a scan whose fields have left the page (the form changed since it was analysed).
+    const gone = this.scan.controls.filter((c) => !c.el.isConnected).length;
+    if (gone && gone >= this.scan.controls.length * 0.3) { this.busy = true; await this.analyze(); this.busy = false; if (keys) return; }
     this.busy = true;
     this.tracker.attach(document);
     const outcomes: FillOutcome[] = [];
@@ -252,15 +257,39 @@ class Agent {
       this.busy = false;
     }
     this.tracker.pushBatch(entries);
-    if (outcomes.length) {
-      await api("POST", `/api/v1/sessions/${this.sessionId}/fill-report`, {
+    // Custom dropdowns we could not match: now that we have seen their options, let the agent match them properly.
+    const learned = outcomes.filter((o) => o.options?.length);
+    if (learned.length && !retried) {
+      for (const o of learned) this.scanner.harvested.set(o.key, o.options!.map((l) => ({ value: l, label: l })));
+      outcomes.splice(0, outcomes.length, ...outcomes.filter((o) => !o.options?.length));
+      if (await this.analyze()) {
+        const retry = learned.map((o) => o.key).filter((k) => { const r = this.results.get(k); return r && (r.action === "fill" || r.action === "review" || r.action === "attach"); });
+        for (const k of retry) this.attempted.delete(k);
+        if (retry.length) {
+          await this.reportAndValidate(outcomes, false);
+          await this.fill(retry, overwrite, auto, true);
+          return;
+        }
+      }
+    }
+    await this.reportAndValidate(outcomes);
+  }
+
+  private async reportAndValidate(outcomes: FillOutcome[], final = true): Promise<void> {
+    if (this.sessionId === null) return;
+    if (outcomes.length || this.carry.ok || this.carry.failed) {
+      if (outcomes.length) await api("POST", `/api/v1/sessions/${this.sessionId}/fill-report`, {
         page_index: this.pageIndex,
         fields: outcomes.map((o) => ({ key: o.key, outcome: o.outcome, ownership: "AGENT_FILLED", value: o.outcome === "FILLED" ? (o.value ?? null) : null, error: o.error ?? null })),
       });
-      const failed = outcomes.filter((o) => o.outcome === "FAILED_TO_FILL").length;
-      const ok = outcomes.filter((o) => o.outcome === "FILLED").length;
-      this.notices = [`Filled ${ok} field${ok === 1 ? "" : "s"}${failed ? `; ${failed} could not be filled and need you` : ""}.`];
+      const failed = this.carry.failed + outcomes.filter((o) => o.outcome === "FAILED_TO_FILL").length;
+      const ok = this.carry.ok + outcomes.filter((o) => o.outcome === "FILLED").length;
+      if (final) {
+        this.notices = [`Filled ${ok} field${ok === 1 ? "" : "s"}${failed ? `; ${failed} could not be filled and need you` : ""}.`];
+        this.carry = { ok: 0, failed: 0 };
+      } else this.carry = { ok, failed };
     }
+    if (!final) return;
     await this.validate();
     this.render();
   }
@@ -291,14 +320,16 @@ class Agent {
     window.setInterval(() => { if (location.pathname !== this.lastPath && !this.busy) void this.onPageChanged(); }, 1000);
   }
 
-  private async onPageChanged(): Promise<void> {
+  private async onPageChanged(force = false): Promise<void> {
     if (this.busy || this.sessionId === null || this.phase === "idle") return;
+    window.clearTimeout(this.navTimer);
     const next = this.scanner.scan(document);
     const keys = new Set(next.controls.map((c) => c.key));
     const same = [...keys].filter((k) => this.lastKeys.has(k)).length;
     const overlap = same / Math.max(1, Math.max(keys.size, this.lastKeys.size));
     const pathChanged = location.pathname !== this.lastPath;
-    if (!pathChanged && keys.size === this.lastKeys.size && overlap === 1) return; // nothing new
+    if (!force && !pathChanged && keys.size === this.lastKeys.size && overlap === 1) return; // nothing new
+    if (force && !pathChanged && overlap === 1 && keys.size === this.lastKeys.size) { this.busy = true; try { await this.analyze(); } finally { this.busy = false; } return; }
     const newPage = (pathChanged && overlap < 0.9) || overlap < 0.4;
     this.lastPath = location.pathname;
     if (newPage && keys.size) {
@@ -314,14 +345,20 @@ class Agent {
     } finally { this.busy = false; }
   }
 
-  /** The user's own clicks on submit buttons are only observed, never made for them. */
+  /** The user's own clicks on next/submit buttons are only observed, never made for them. */
   private onUserClick(ev: MouseEvent): void {
-    if (!ev.isTrusted || this.sessionId === null) return;
+    if (!ev.isTrusted || this.sessionId === null || this.phase === "idle") return;
     const t = ev.target as HTMLElement | null;
     const btn = t?.closest<HTMLElement>("button,input[type=submit],input[type=button],a[role=button],[role=button]");
     if (!btn) return;
-    if (this.adapter.navButtons(document).submit.includes(btn)) {
+    const nav = this.adapter.navButtons(document);
+    if (nav.submit.includes(btn)) {
       window.setTimeout(() => { this.askSubmitted = true; this.render(); }, 1500);
+    } else if (nav.next.includes(btn) && !this.busy) {
+      // The form is about to change under the panel; do not let the user act on stale results.
+      this.working("Checking the next page…");
+      window.clearTimeout(this.navTimer);
+      this.navTimer = window.setTimeout(() => void this.onPageChanged(true), 1800);
     }
   }
 
@@ -352,7 +389,7 @@ class Agent {
       phase: this.phase, message: this.message, error: this.error, job: this.job ?? undefined, mode: this.mode,
       counts: this.counts, resume: this.resume, ready, attention: this.attention, controls, results: this.results,
       duplicates: this.duplicates, notices: this.notices, canUndo: this.tracker.lastBatchSize > 0, addEntries: this.addEntries(),
-      final: this.finalReview, askSubmitted: this.askSubmitted, embeddedAts: embedded, noFields: this.phase === "ready" && (this.counts?.detected ?? 0) === 0,
+      pageIndex: this.pageIndex, final: this.finalReview, askSubmitted: this.askSubmitted, embeddedAts: embedded, noFields: this.phase === "ready" && (this.counts?.detected ?? 0) === 0,
     });
     this.pendingResumeLabel = undefined;
   }

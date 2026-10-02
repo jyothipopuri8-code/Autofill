@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Job Application for Staff Security Engineer at Initech</title>
+  <style>body{font:15px system-ui;max-width:720px;margin:24px auto;padding:0 16px}.field{margin:14px 0}label{display:block;font-weight:600;margin-bottom:4px}input[type=text],input[type=email],input[type=tel]{width:100%;padding:6px}
+  .select{position:relative}.select .control{border:1px solid #888;padding:6px;border-radius:4px;cursor:pointer;min-height:32px;display:flex}.select input{border:0;outline:0;flex:1;min-width:20px}.select .single{margin-right:6px}
+  .select .menu{position:absolute;left:0;right:0;border:1px solid #888;background:#fff;z-index:5}.select .menu div{padding:6px;cursor:pointer}.select .menu div:hover{background:#eef}</style>
+</head>
+<body>
+  <div id="grnhse_app">
+    <div class="app-title"><h1>Staff Security Engineer</h1></div>
+    <div class="location">Remote - US</div>
+    <div id="content"><div class="job__description">Initech is looking for a Staff Security Engineer to lead product security reviews and mentor engineers across the company. You will own threat models, security design reviews and our vulnerability management program.</div></div>
+    <form id="application_form">
+      <div id="main_fields">
+        <div class="field"><label for="first_name">First Name <span aria-hidden="true">*</span></label><input id="first_name" name="job_application[first_name]" type="text" required autocomplete="given-name"></div>
+        <div class="field"><label for="last_name">Last Name <span aria-hidden="true">*</span></label><input id="last_name" name="job_application[last_name]" type="text" required autocomplete="family-name"></div>
+        <div class="field"><label for="email">Email <span aria-hidden="true">*</span></label><input id="email" name="job_application[email]" type="email" required></div>
+        <div class="field"><label for="phone">Phone</label><input id="phone" name="job_application[phone]" type="tel"></div>
+        <div class="field"><label for="resume">Resume/CV <span aria-hidden="true">*</span></label><input id="resume" name="job_application[resume]" type="file"></div>
+      </div>
+      <div id="custom_fields">
+        <div class="field select" id="sel-auth">
+          <label id="auth-label" for="auth-input">Are you legally authorized to work in the United States? *</label>
+          <div class="control" role="presentation"><span class="single" data-singlevalue></span><input id="auth-input" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="auth-label" aria-autocomplete="list" type="text"></div>
+        </div>
+        <div class="field select" id="sel-edu">
+          <label id="edu-label" for="edu-input">What is your highest level of education?</label>
+          <div class="control" role="presentation"><span class="single" data-singlevalue></span><input id="edu-input" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="edu-label" aria-autocomplete="list" type="text"></div>
+        </div>
+      </div>
+      <button type="submit" id="submit_app">Submit Application</button>
+    </form>
+  </div>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("application_form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    // react-select-like dropdowns: open on mousedown, filter on input, pick on click, show the choice next to the input.
+    function dropdown(root, options) {
+      const input = root.querySelector("input"), single = root.querySelector("[data-singlevalue]"), control = root.querySelector(".control");
+      let menu = null;
+      function close() { if (menu) { menu.remove(); menu = null; input.setAttribute("aria-expanded", "false"); } }
+      function open() {
+        close(); const q = input.value.trim().toLowerCase();
+        menu = document.createElement("div"); menu.className = "menu"; menu.setAttribute("role", "listbox");
+        options.filter((o) => !q || o.toLowerCase().includes(q)).forEach((o) => {
+          const d = document.createElement("div"); d.setAttribute("role", "option"); d.textContent = o;
+          d.addEventListener("click", () => { single.textContent = o; input.value = ""; close(); });
+          menu.appendChild(d);
+        });
+        root.appendChild(menu); input.setAttribute("aria-expanded", "true");
+      }
+      control.addEventListener("mousedown", (e) => { if (!menu) open(); });
+      input.addEventListener("input", open);
+      input.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+      document.addEventListener("click", (e) => { if (!root.contains(e.target)) close(); });
+    }
+    dropdown(document.getElementById("sel-auth"), ["Yes", "No"]);
+    dropdown(document.getElementById("sel-edu"), ["High School", "Associate's Degree", "Bachelor's Degree", "Master's Degree", "Doctorate"]);
+  </script>
+</body>
+</html>

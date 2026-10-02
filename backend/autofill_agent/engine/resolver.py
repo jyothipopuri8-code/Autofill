@@ -16,7 +16,7 @@ from autofill_agent.engine import custom_questions as cq
 from autofill_agent.engine.dates import date_parts, format_date, infer_format
 from autofill_agent.engine.descriptor import FieldDescriptor, Option
 from autofill_agent.engine.matching import Match, classify
-from autofill_agent.engine.options import match_option, usable
+from autofill_agent.engine.options import match_date_option, match_option, usable
 from autofill_agent.engine.taxonomy import BY_KEY, normalize
 
 SOURCE_FACTOR = {
@@ -535,8 +535,11 @@ def resolve_field(d: FieldDescriptor, ctx: Context, ats: str | None = None) -> F
 
     opts = usable(d.options)
     if opts and d.kind in ("select", "custom_select", "radio_group", "checkbox_group", "autocomplete") or (opts and d.kind == "unknown"):
-        om = match_option(cand.value if not cand.iso_date else value, d.options, canonical)
-        if om.option is None and cand.iso_date:
+        if cand.iso_date:
+            om = match_date_option(cand.value, d.options)
+            if om.option is None and om.note is None:
+                om = match_option(value, d.options, canonical)
+        else:
             om = match_option(cand.value, d.options, canonical)
         if om.option is None:
             note = om.note or f"None of the options match '{value}'"

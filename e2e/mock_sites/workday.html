@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Senior Product Security Engineer - Globex Careers</title>
+  <style>body{font:15px system-ui;max-width:760px;margin:24px auto;padding:0 16px}.f{margin:12px 0}label{display:block;font-weight:600;margin-bottom:3px}input[type=text],input[type=email],input[type=tel],textarea,select{width:100%;padding:6px}
+  button[aria-haspopup]{width:100%;text-align:left;padding:6px;border:1px solid #888;background:#fff}ul[role=listbox]{list-style:none;margin:0;padding:0;border:1px solid #888;background:#fff}li[role=option]{padding:6px;cursor:pointer}li[role=option]:hover{background:#eef}
+  .entry{border:1px solid #ccc;padding:8px 12px;margin:10px 0;border-radius:6px}nav{margin-top:20px;display:flex;gap:10px}</style>
+</head>
+<body>
+  <h2 data-automation-id="jobPostingHeader">Senior Product Security Engineer</h2>
+  <div data-automation-id="locations"><dd>Houston, TX</dd></div>
+  <div data-automation-id="jobPostingDescription">Globex is hiring a senior product security engineer to build secure-by-default platforms and lead threat modeling across product teams.</div>
+  <div id="stepTitle"></div>
+  <div id="step"></div>
+  <nav>
+    <button type="button" id="back" data-automation-id="bottom-navigation-back-button" hidden>Back</button>
+    <button type="button" id="next" data-automation-id="bottom-navigation-next-button">Save and Continue</button>
+    <button type="button" id="submit" data-automation-id="bottom-navigation-submit" hidden>Submit</button>
+  </nav>
+  <script>
+    window.__submitClicks = 0; window.__nextClicks = 0;
+    let step = 0, nExp = 1, nEdu = 1;
+    const $ = (s) => document.querySelector(s);
+    const state = {};
+    const MONTH_YEAR = ' placeholder="MM/YYYY"';
+    function text(id, label, auto, type = "text", extra = "") {
+      return `<div class="f"><label for="${id}">${label}</label><input id="${id}" type="${type}" data-automation-id="${auto}" ${extra}></div>`;
+    }
+    function listbox(id, label, auto, options) {
+      return `<div class="f"><label id="${id}-l">${label}</label><button type="button" id="${id}" aria-haspopup="listbox" aria-labelledby="${id}-l" data-automation-id="${auto}" data-options='${JSON.stringify(options)}'>Select One</button></div>`;
+    }
+    function expEntry(i) {
+      return `<div class="entry" data-automation-id="workExperience-${i}"><h4>Work Experience ${i}</h4>
+        ${text(`jt${i}`, "Job Title", "jobTitle")}${text(`co${i}`, "Company", "company")}${text(`loc${i}`, "Location", "location")}
+        ${text(`from${i}`, "From", "startDate", "text", MONTH_YEAR)}${text(`to${i}`, "To", "endDate", "text", MONTH_YEAR)}
+        <div class="f"><label for="rd${i}">Role Description</label><textarea id="rd${i}" data-automation-id="roleDescription"></textarea></div></div>`;
+    }
+    function eduEntry(i) {
+      return `<div class="entry" data-automation-id="education-${i}"><h4>Education ${i}</h4>
+        ${text(`sch${i}`, "School or University", "school")}
+        ${listbox(`deg${i}`, "Degree", "degree", ["High School", "Associate's Degree", "Bachelor's Degree", "Master's Degree", "Doctorate"])}
+        ${text(`fos${i}`, "Field of Study", "fieldOfStudy")}</div>`;
+    }
+    const steps = [
+      { title: "My Information", html: () => `<h3>My Information</h3>
+        ${listbox("country", "Country", "countryDropdown", ["Canada", "India", "United States of America"])}
+        ${text("fn", "First Name *", "legalNameSection_firstName", "text", "required")}${text("ln", "Last Name *", "legalNameSection_lastName", "text", "required")}
+        ${text("em", "Email *", "email", "email", "required")}${text("ph", "Phone Number *", "phone-number", "tel", "required")}` },
+      { title: "My Experience", html: () => `<h3>My Experience</h3>
+        <div data-automation-id="workExperienceSection"><h3>Work Experience</h3>${Array.from({ length: nExp }, (_, k) => expEntry(k + 1)).join("")}
+          <button type="button" data-automation-id="add-button" id="addExp">Add Another</button></div>
+        <div data-automation-id="educationSection"><h3>Education</h3>${Array.from({ length: nEdu }, (_, k) => eduEntry(k + 1)).join("")}
+          <button type="button" data-automation-id="add-button" id="addEdu">Add Another</button></div>
+        <div class="f"><label for="resume">Resume/CV</label><input id="resume" type="file" data-automation-id="file-upload-input-ref"></div>` },
+      { title: "Application Questions", html: () => `<h3>Application Questions</h3>
+        <fieldset><legend>Are you legally authorized to work in the United States? *</legend>
+          <label><input type="radio" name="auth" value="Yes"> Yes</label> <label><input type="radio" name="auth" value="No"> No</label></fieldset>
+        <div class="f"><label for="sal">What are your salary expectations?</label><input id="sal" type="text"></div>
+        <div class="f"><label for="vet">Veteran Status</label><select id="vet"><option value="">Select...</option><option>I am not a protected veteran</option><option>I am a protected veteran</option><option>I decline to self-identify</option></select></div>` },
+      { title: "Review", html: () => `<h3>Review</h3><p>Check everything, then submit the application yourself.</p>` },
+    ];
+    function render() {
+      $("#step").innerHTML = steps[step].html();
+      $("#stepTitle").textContent = `Step ${step + 1} of ${steps.length}: ${steps[step].title}`;
+      $("#back").hidden = step === 0; $("#next").hidden = step === steps.length - 1; $("#submit").hidden = step !== steps.length - 1;
+    }
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (t.id === "next") { window.__nextClicks++; step = Math.min(step + 1, steps.length - 1); render(); }
+      else if (t.id === "back") { step = Math.max(0, step - 1); render(); }
+      else if (t.id === "submit") { window.__submitClicks++; }
+      else if (t.id === "addExp") { snapshot(); nExp++; render(); restore(); }
+      else if (t.id === "addEdu") { snapshot(); nEdu++; render(); restore(); }
+      else if (t.matches && t.matches("li[role=option]")) { const b = document.querySelector("button[aria-expanded=true]"); if (b) { b.textContent = t.textContent; b.setAttribute("aria-expanded", "false"); } t.closest("ul").remove(); }
+      else if (t.matches && t.matches("button[aria-haspopup=listbox]")) {
+        document.querySelectorAll("ul[role=listbox]").forEach((u) => u.remove());
+        const ul = document.createElement("ul"); ul.setAttribute("role", "listbox");
+        JSON.parse(t.dataset.options).forEach((o) => { const li = document.createElement("li"); li.setAttribute("role", "option"); li.textContent = o; ul.appendChild(li); });
+        t.setAttribute("aria-expanded", "true"); t.after(ul);
+      }
+    });
+    // Keep what is typed when a section grows (the real site re-renders the whole step).
+    let saved = {};
+    function snapshot() { saved = {}; document.querySelectorAll("#step input,#step textarea,#step select").forEach((e) => { if (e.id) saved[e.id] = e.value; }); document.querySelectorAll("#step button[aria-haspopup]").forEach((b) => { saved[b.id] = b.textContent; }); }
+    function restore() { for (const [id, v] of Object.entries(saved)) { const e = document.getElementById(id); if (e) { if (e.tagName === "BUTTON") e.textContent = v; else e.value = v; } } }
+    render();
+  </script>
+</body>
+</html>

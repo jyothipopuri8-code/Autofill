@@ -112,3 +112,14 @@ def test_does_not_treat_other_name_fields_as_person_name():
     assert classify(fd(label="Company name")).canonical != "personal.full_name"
     assert classify(fd(label="School name")).canonical != "personal.full_name"
     assert classify(fd(label="Reference name")).canonical != "personal.full_name"
+
+
+def test_documents_and_legal_fields_match_even_when_the_page_puts_them_inside_a_section():
+    from autofill_agent.engine.descriptor import FieldDescriptor
+    from autofill_agent.engine.matching import classify
+
+    sec = {"name": "education", "index": 0}
+    assert classify(FieldDescriptor(key="k", kind="file", label="Resume/CV", section=sec)).canonical == "resume.file"
+    assert classify(FieldDescriptor(key="k", kind="checkbox", label="I agree to the Privacy Policy and Terms", section=sec)).canonical.startswith("legal.")
+    # ordinary profile fields do not leak into sections
+    assert classify(FieldDescriptor(key="k", kind="text", label="Email address", section=sec)).canonical is None

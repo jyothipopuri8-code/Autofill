@@ -41,6 +41,16 @@ export const HEADING_SELECTOR = HEADING;
 
 export interface Entry { el: HTMLElement; d: FieldDescriptor }
 
+const CONTROLS = "input,select,textarea,[role=combobox],button[aria-haspopup]";
+
+/** The smallest ancestor of a heading that also holds form controls: the area the heading's section covers. */
+function scopeOf(heading: Element): Element | null {
+  for (let p = heading.parentElement; p && p !== p.ownerDocument.body; p = p.parentElement) {
+    if (p.querySelector(CONTROLS)) return p;
+  }
+  return null; // flat page: the section lasts until the next heading
+}
+
 /**
  * ``order`` is every heading and every field in document order. Each field takes the section of the
  * nearest preceding heading; its index is how many fields with the same label the section already had.
@@ -51,6 +61,7 @@ export function assignSections(
   override?: (el: HTMLElement) => SectionRef | null,
 ): void {
   let current: Name | null = null;
+  let scope: Element | null = null;
   const seen = new Map<string, number>();
   for (const el of order) {
     const d = entries.get(el);
@@ -60,12 +71,15 @@ export function assignSections(
         if (c !== "keep") {
           if (c !== current) seen.clear();
           current = c;
+          scope = c ? scopeOf(el) : null;
         }
       }
       continue;
     }
     const forced = override?.(el);
     if (forced) { d.section = forced; continue; }
+    // A field outside the block the heading introduced (a "Documents" area after "Education") is not part of it.
+    if (current && scope && !scope.contains(el)) { current = null; scope = null; seen.clear(); }
     if (!current) continue;
     const sig = `${current}|${norm(d.label || d.aria_label || d.legend || d.placeholder || d.name || d.nearby_text || "")}`;
     const idx = seen.get(sig) ?? 0;

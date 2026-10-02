@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Data Analyst - Hooli Jobs</title><meta property="og:site_name" content="Hooli"></head>
+<body style="font:15px system-ui;max-width:640px;margin:24px auto">
+  <h1>Data Analyst</h1>
+  <form id="f2">
+    <h2>Step 2: Contact and questions</h2>
+    <p><label for="ph">Mobile phone</label><br><input id="ph" name="ph" type="tel"></p>
+    <p><label for="city">City</label><br><input id="city" name="city" type="text"></p>
+    <p><label for="li">LinkedIn URL</label><br><input id="li" name="li" type="url"></p>
+    <p><label for="why">What interests you about Hooli? *</label><br><textarea id="why" name="why" rows="3" required></textarea></p>
+    <button type="submit" id="submit">Submit Application</button>
+  </form>
+  <script>window.__submitClicks = 0; document.getElementById("f2").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });</script>
+</body>
+</html>

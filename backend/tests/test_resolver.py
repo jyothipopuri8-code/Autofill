@@ -270,3 +270,29 @@ def test_unmatched_option_never_forced():
     assert r.action == "ask" and r.value is None and "None of the options match" in r.reason
     r = resolve_field(fd(label="Optional note"), ctx())
     assert r.status is FieldStatus.OPTIONAL_EMPTY
+
+
+MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+
+def test_month_and_year_dropdowns_use_the_date_parts():
+    sec = {"name": "experience", "index": 0}
+    month = resolve_field(fd(label="Start date month", kind="select", section=sec, options=[{"label": "Month"}, *({"label": m} for m in MONTHS)]), ctx())
+    assert month.option["label"] == "January" and month.action in ("fill", "review")
+    year = resolve_field(fd(label="Start date year", kind="select", section=sec, options=[{"label": "Year"}, *({"label": str(y)} for y in range(2015, 2027))]), ctx())
+    assert year.option["label"] == "2021"
+    combined = resolve_field(fd(label="Start date", kind="custom_select", section=sec, options=[{"label": f"{m} {y}"} for y in (2020, 2021) for m in MONTHS]), ctx())
+    assert combined.option["label"] == "January 2021"
+    numeric = resolve_field(fd(label="Start date month", kind="select", section={"name": "experience", "index": 1}, options=[{"label": str(i), "value": f"{i:02d}"} for i in range(1, 13)]), ctx())
+    assert numeric.option["label"] == "6"
+
+
+def test_month_dropdown_never_invents_a_missing_month():
+    from autofill_agent.engine.options import match_date_option
+    from autofill_agent.engine.descriptor import Option
+
+    opts = [Option(label=m, value=m.lower()) for m in MONTHS]
+    m = match_date_option("2021", opts)
+    assert m.option is None and "month" in (m.note or "")
+    assert match_date_option("2021-09", opts).option.label == "September"
+    assert match_date_option("2021-09", [Option(label=str(y), value=str(y)) for y in (2020, 2021)]).option.label == "2021"

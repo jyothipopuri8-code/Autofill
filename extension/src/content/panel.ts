@@ -12,6 +12,7 @@ export interface PanelModel {
   error?: string;
   job?: JobInfo;
   mode: Mode;
+  pageIndex: number;
   counts?: Counts;
   resume?: ResumeState;
   ready: FieldResult[];
@@ -77,6 +78,7 @@ button:disabled{opacity:.5;cursor:default}
 .banner.bad{border-color:var(--bad)}.banner.warn{border-color:var(--warn)}
 .card{padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);display:flex;flex-direction:column;gap:6px}
 .card h4{margin:0;font-size:13px}
+.card button{align-self:flex-start}
 .card .why{color:var(--mut);font-size:12px}
 .card .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-word}
 .tag{font-size:11px;color:var(--mut)}
@@ -117,7 +119,7 @@ export class Panel {
     this.host = document.createElement("div");
     this.host.setAttribute(HOST_ATTR, "");
     this.host.style.cssText = "all:initial;position:fixed;z-index:2147483647;";
-    this.root = this.host.attachShadow({ mode: "closed" });
+    this.root = this.host.attachShadow({ mode: __E2E__ ? "open" : "closed" });
     try {
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(CSS);
@@ -157,7 +159,7 @@ export class Panel {
     this.model = m;
     this.mount();
     this.root.querySelector(".wrap")?.remove();
-    const wrap = h("div", { class: `wrap${this.minimized ? " min" : ""}` });
+    const wrap = h("div", { class: `wrap${this.minimized ? " min" : ""}`, "data-page": m.pageIndex, "data-phase": m.phase });
     this.wrap = wrap;
 
     const title = h("div", { class: "t" }, h("b", {}, "Autofill Agent"),
@@ -176,6 +178,7 @@ export class Panel {
 
   private renderBody(body: HTMLElement, m: PanelModel): void {
     if (m.phase === "idle") {
+      for (const n of m.notices) body.append(h("div", { class: "banner" }, n));
       body.append(h("div", {}, "Start an application session to scan this page and prepare answers from your profile and resume."),
         h("div", { class: "row" }, h("button", { class: "pri", onclick: () => this.act.start() }, "Start on this page")));
       if (m.embeddedAts) body.append(this.embeddedBanner(m));
@@ -238,7 +241,8 @@ export class Panel {
     body.append(row);
 
     for (const e of m.addEntries) {
-      body.append(h("div", { class: "banner" }, `Your resume has ${e.want} ${e.name} entr${e.want === 1 ? "y" : "ies"}; this page shows ${e.have}.`,
+      const noun = ({ experience: "work experience", education: "education", certification: "certification", language: "language" } as Record<string, string>)[e.name] ?? e.name;
+      body.append(h("div", { class: "banner" }, `Your resume has ${e.want} ${noun} entr${e.want === 1 ? "y" : "ies"}; this page shows ${e.have}.`,
         h("div", { class: "row" }, h("button", { onclick: () => this.act.addEntries(e.name) }, `Add ${e.want - e.have} more`))));
     }
 

@@ -21,6 +21,8 @@ export interface FillOutcome {
   value?: string;
   error?: string;
   undo?: UndoEntry;
+  /** Options seen when a custom dropdown had no matching entry, so the agent can match them properly. */
+  options?: string[];
 }
 
 const TEXTY = new Set(["text", "email", "tel", "number", "url", "textarea", "autocomplete", "date", "month_year", "unknown"]);
@@ -138,40 +140,51 @@ function visibleOptions(doc: Document, el: HTMLElement): HTMLElement[] {
   return pool.filter((o) => o.getClientRects().length > 0 && getComputedStyle(o).visibility !== "hidden");
 }
 
-async function fillCustomSelect(c: Control, r: FieldResult): Promise<{ ok: boolean; error?: string }> {
+async function fillCustomSelect(c: Control, r: FieldResult): Promise<{ ok: boolean; error?: string; options?: string[] }> {
   const el = c.el;
   const doc = el.ownerDocument;
   const target = collapse(r.option?.label ?? r.value ?? "", 300);
   if (!target) return { ok: false, error: "No value to choose" };
   const isInput = el instanceof HTMLInputElement;
+  const t = norm(target);
+  const text = (o: HTMLElement) => norm(o.textContent);
+  const pick = (opts: HTMLElement[]): HTMLElement[] => {
+    const exact = opts.filter((o) => text(o) === t);
+    return exact.length ? exact : opts.filter((o) => text(o).startsWith(t));
+  };
+  const labelsOf = (opts: HTMLElement[]) => opts.map((o) => collapse(o.textContent, 200)).filter(Boolean).slice(0, 200);
 
+  // 1. Open without typing, so the full list is visible (and can be shown to the agent if nothing matches).
   el.focus({ preventScroll: true });
   realClick(el);
-  if (isInput) {
+  if (!isInput) el.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+  let opts = await waitFor(() => { const o = visibleOptions(doc, el); return o.length ? o : null; }, 2000);
+  await sleep(60);
+  opts = visibleOptions(doc, el);
+  const fullList = labelsOf(opts);
+  let hit = pick(opts);
+
+  // 2. Search-as-you-type widgets only list options once something is typed.
+  if (hit.length !== 1 && isInput) {
     setNativeValue(el as HTMLInputElement, target);
     fireInput(el, target);
-  } else {
-    el.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await waitFor(() => { const o = visibleOptions(doc, el); return o.length ? o : null; }, 1500);
+    await sleep(120);
+    hit = pick(visibleOptions(doc, el));
   }
-  const options = await waitFor(() => { const o = visibleOptions(doc, el); return o.length ? o : null; }, 2500);
-  if (!options) { close(el); return { ok: false, error: "The dropdown did not show any options" }; }
-  await sleep(80); // let a filtered list settle
 
-  const live = visibleOptions(doc, el);
-  const text = (o: HTMLElement) => norm(o.textContent);
-  const t = norm(target);
-  let hit = live.filter((o) => text(o) === t);
-  if (hit.length !== 1) hit = hit.length ? hit : live.filter((o) => text(o).startsWith(t));
   if (hit.length !== 1) {
+    if (isInput && (el as HTMLInputElement).value) { setNativeValue(el as HTMLInputElement, ""); fireInput(el); }
     close(el);
-    return { ok: false, error: hit.length > 1 ? `Several options match "${target}"` : `No option matches "${target}"` };
+    const why = hit.length > 1 ? `Several options match "${target}"` : fullList.length ? `No option matches "${target}"` : "The dropdown did not show any options";
+    return { ok: false, error: why, options: fullList.length ? fullList : undefined };
   }
   realClick(hit[0]);
   await sleep(60);
   const now = norm(customCurrent(el));
-  // Some widgets show the choice in a sibling element we cannot see; the dropdown closing is the second signal.
+  // Some widgets show the choice in an element we cannot read; the list closing is the second signal.
   const closed = !visibleOptions(doc, el).length;
-  if (now === t || (now && now.includes(t)) || (closed && (!now || now === t))) return { ok: true };
+  if (now === t || (now && now.includes(t)) || (closed && !now)) return { ok: true };
   close(el);
   return { ok: false, error: "The dropdown did not keep the selection" };
 }
@@ -259,6 +272,7 @@ export async function fillControl(c: Control, r: FieldResult, env: FillEnv, expe
     } else if (kind === "custom_select") {
       const res = await fillCustomSelect(c, r);
       ok = res.ok; error = res.error;
+      if (!ok && res.options?.length) return { key, outcome: "FAILED_TO_FILL", error: error || "Could not fill", options: res.options };
     } else {
       return skip("This kind of field is not filled automatically");
     }

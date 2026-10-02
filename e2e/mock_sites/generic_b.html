@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Product Security Engineer - Acme Corp Careers</title>
+  <meta property="og:site_name" content="Acme Corp">
+  <style>body{font:15px system-ui;max-width:720px;margin:24px auto;padding:0 16px}label{display:block;margin-top:12px;font-weight:600}input[type=text],input[type=email],input[type=tel],input[type=url],select,textarea{width:100%;padding:6px}fieldset{margin-top:14px}</style>
+</head>
+<body>
+  <h1>Product Security Engineer</h1>
+  <p>Acme Corp is hiring a Product Security Engineer to secure our customer-facing products. Austin, TX. You will design detections, review code and respond to incidents across a cloud-native stack.</p>
+  <form id="app" novalidate>
+    <h2>Personal information</h2>
+    <label for="fn">First name *</label><input id="fn" name="first_name" type="text" required autocomplete="given-name">
+    <label for="ln">Last name *</label><input id="ln" name="last_name" type="text" required autocomplete="family-name">
+    <label for="em">Email *</label><input id="em" name="email" type="email" required>
+    <label for="ph">Phone</label><input id="ph" name="phone" type="tel">
+    <label for="li">LinkedIn profile</label><input id="li" name="linkedin" type="url" placeholder="https://linkedin.com/in/...">
+    <label for="city">City</label><input id="city" name="city" type="text">
+    <label for="state">State</label>
+    <select id="state" name="state"><option value="">Select...</option><option value="CA">California</option><option value="TX">Texas</option><option value="UT">Utah</option></select>
+    <label for="country">Country</label>
+    <select id="country" name="country"><option value="">Select...</option><option>Canada</option><option>United States</option><option>India</option></select>
+
+    <h2>Documents</h2>
+    <label for="resume">Resume/CV *</label><input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx" required>
+    <label for="cover">Cover letter</label><input id="cover" name="cover_letter" type="file">
+
+    <h2>Questions</h2>
+    <fieldset id="wa"><legend>Are you legally authorized to work in the United States? *</legend>
+      <label><input type="radio" name="auth" value="yes"> Yes</label>
+      <label><input type="radio" name="auth" value="no"> No</label></fieldset>
+    <fieldset id="sp"><legend>Will you now or in the future require visa sponsorship? *</legend>
+      <label><input type="radio" name="sponsor" value="yes"> Yes</label>
+      <label><input type="radio" name="sponsor" value="no"> No</label></fieldset>
+    <label for="py">How many years of experience do you have with Python?</label><input id="py" name="q_python" type="text">
+    <label for="why">Why do you want to work at Acme Corp? *</label><textarea id="why" name="q_why" required rows="4"></textarea>
+    <label for="gender">Gender</label>
+    <select id="gender" name="gender"><option value="">Select...</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Decline to self-identify</option></select>
+    <label for="start">Available start date</label><input id="start" name="start_date" type="text" placeholder="MM/DD/YYYY">
+    <label for="pw">Create a password</label><input id="pw" name="password" type="password">
+    <label style="font-weight:400"><input id="agree" type="checkbox" name="agree" required> I agree to the Privacy Policy and Terms</label>
+    <div class="g-recaptcha" data-sitekey="mock" style="margin:12px 0;padding:18px;border:1px dashed #888">I'm not a robot (mock CAPTCHA)</div>
+    <button id="submit" type="submit">Submit Application</button>
+  </form>
+  <p id="done" hidden>Submitted!</p>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("app").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; document.getElementById("done").hidden = false; });
+    // A page that tries to read the agent must be refused (the token never reaches page scripts).
+    window.__probe = fetch("http://127.0.0.1:8765/api/v1/profile").then((r) => r.status, () => "blocked");
+  </script>
+</body>
+</html>

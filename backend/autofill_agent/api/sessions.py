@@ -427,6 +427,8 @@ def fill_report(session_id: int, body: FillReport, s: Session = Depends(get_sess
         row.ownership = item.ownership
         if item.value is not None:
             row.final_value = item.value
+        if item.outcome == "FAILED_TO_FILL":
+            row.reason = f"Could not fill this automatically: {item.error}" if item.error else "Could not fill this automatically"
         updated += 1
     if updated and sess.application.status is ApplicationStatus.STARTED:
         sess.application.status = ApplicationStatus.IN_PROGRESS

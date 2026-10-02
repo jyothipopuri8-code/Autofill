@@ -179,3 +179,47 @@ def match_option(value: str | None, options: list[Option], canonical: str | None
     if sub:
         return _unique(sub, 0.88, "Matched by words in the answer")
     return OptionMatch(None)
+
+
+_MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+
+
+def _month_number(label: str) -> int | None:
+    n = _norm(label)
+    if n.isdigit() and 1 <= int(n) <= 12:
+        return int(n)
+    for i, name in enumerate(_MONTHS, 1):
+        if n == name or (len(n) >= 3 and name.startswith(n) and n in (name[:3], name[:4])):
+            return i
+    return None
+
+
+def match_date_option(iso: str | None, options: list[Option]) -> OptionMatch:
+    """Pick the option of a month, year or month-and-year dropdown for an internal date (doc §20).
+
+    Never guesses a missing part: a month dropdown with a year-only date yields no option and a note.
+    """
+    from autofill_agent.engine.dates import format_date, parse_iso
+
+    p = parse_iso(iso)
+    opts = [o for o in usable(options) if not re.fullmatch(r"(?i)(month|year|mm|yyyy|yy|day|dd)", (o.label or o.value).strip())]
+    if p is None or not opts:
+        return OptionMatch(None)
+    year, month, _day = p
+
+    if all(_month_number(o.label or o.value) is not None for o in opts):
+        if month is None:
+            return OptionMatch(None, 0.0, "The month is not on file for this date")
+        return _unique([o for o in opts if _month_number(o.label or o.value) == month], 0.99)
+
+    if all(re.fullmatch(r"\d{4}", (o.label or o.value).strip()) for o in opts):
+        return _unique([o for o in opts if (o.label or o.value).strip() == str(year)], 0.99)
+
+    for fmt in ("MMMM YYYY", "MMM YYYY", "MM/YYYY", "M/YYYY", "YYYY-MM", "MM-YYYY", "YYYY/MM", "MM/DD/YYYY", "YYYY-MM-DD"):
+        f = format_date(iso, fmt)
+        if f is None:
+            continue
+        hits = [o for o in opts if _norm(o.label) == _norm(f) or _norm(o.value) == _norm(f)]
+        if hits:
+            return _unique(hits, 0.97)
+    return OptionMatch(None)

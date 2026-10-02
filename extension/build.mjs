@@ -10,7 +10,8 @@ const out = e2e ? "dist-e2e" : "dist";
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
-const common = { bundle: true, target: "chrome114", sourcemap: false, logLevel: "info", legalComments: "none" };
+// __E2E__ only switches the panel to an open shadow root so browser tests can reach it; production stays closed.
+const common = { bundle: true, target: "chrome114", sourcemap: false, logLevel: "info", legalComments: "none", define: { __E2E__: String(e2e) } };
 const jobs = [
   { ...common, entryPoints: { background: "src/background/index.ts" }, format: "esm", outdir: out },
   { ...common, entryPoints: { content: "src/content/index.ts" }, format: "iife", outdir: out },

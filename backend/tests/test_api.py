@@ -72,3 +72,21 @@ def test_non_loopback_host_refused(tmp_path):
 def test_web_origin_not_accepted_in_config(tmp_path):
     with pytest.raises(ValidationError):
         Settings(allowed_origins=["https://example.com"], data_dir=tmp_path, _env_file=None)
+
+
+def test_default_allowed_origin_is_the_pinned_extension_id(tmp_path):
+    import json
+    from pathlib import Path
+
+    from autofill_agent.config import OFFICIAL_EXTENSION_ORIGIN
+
+    s = Settings(data_dir=tmp_path, _env_file=None)
+    assert s.allowed_origins == [OFFICIAL_EXTENSION_ORIGIN]
+    # The ID must match what the manifest's public key produces, or the browser would use a different origin.
+    import base64
+    import hashlib
+
+    manifest = json.loads((Path(__file__).resolve().parents[2] / "extension" / "manifest.base.json").read_text())
+    der = base64.b64decode(manifest["key"])
+    ext_id = "".join(chr(ord("a") + int(c, 16)) for c in hashlib.sha256(der).hexdigest()[:32])
+    assert OFFICIAL_EXTENSION_ORIGIN == f"chrome-extension://{ext_id}"

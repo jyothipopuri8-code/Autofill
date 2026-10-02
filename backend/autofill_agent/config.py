@@ -19,6 +19,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LOOPBACK_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+# The extension's ID is fixed by the public key in extension/manifest.base.json, so the same origin works
+# for every install (unpacked or packed). Set AUTOFILL_ALLOWED_ORIGINS to replace it, e.g. for a fork.
+OFFICIAL_EXTENSION_ORIGIN = "chrome-extension://jjheeejkdncdmiafpefbeimcgphphonh"
 
 
 def default_data_dir() -> Path:
@@ -37,10 +40,9 @@ class Settings(BaseSettings):
     port: int = Field(default=DEFAULT_PORT, ge=1024, le=65535)
     data_dir: Path = Field(default_factory=default_data_dir)
 
-    # Browser extension origins allowed to call the API, e.g.
-    # "chrome-extension://abcdefghijklmnopabcdefghijklmnop". Empty means no
-    # browser origin is accepted until the extension is registered.
-    allowed_origins: list[str] = Field(default_factory=list)
+    # Browser extension origins allowed to call the API. Defaults to this project's extension;
+    # an empty list means no browser origin is accepted at all.
+    allowed_origins: list[str] = Field(default_factory=lambda: [OFFICIAL_EXTENSION_ORIGIN])
 
     max_resume_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
 

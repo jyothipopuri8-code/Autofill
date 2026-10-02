@@ -305,3 +305,12 @@ def test_application_history(client, auth, env):
     assert d["matches"][0]["status"] == "SUBMITTED"
     assert client.delete(f"/api/v1/applications/{aid}", headers=auth).status_code == 204
     assert client.get(f"{S}/{sid}", headers=auth).status_code == 404
+
+
+def test_fill_failures_keep_their_reason_for_the_user(client, auth, env):
+    sid = create(client, auth).json()["id"]
+    client.post(f"{S}/{sid}/analyze", headers=auth, json={"page_index": 0, "fields": [F("fn", "First Name", required=True)]})
+    r = client.post(f"{S}/{sid}/fill-report", headers=auth, json={"page_index": 0, "fields": [{"key": "fn", "outcome": "FAILED_TO_FILL", "error": "The dropdown did not keep the selection"}]})
+    assert r.json() == {"updated": 1}
+    item = client.get(f"{S}/{sid}/attention", headers=auth).json()["items"][0]
+    assert item["status"] == "FAILED_TO_FILL" and "did not keep the selection" in item["reason"]
