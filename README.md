@@ -22,6 +22,8 @@ docs/        Notes and decisions
 | 4 | Profile manager API (`/api/v1/profile`, sensitive-field policies) | done |
 | 5 | Answer library API (`/api/v1/answers`) | done |
 | 6 | Resume manager API (`/api/v1/resumes`: upload, SHA-256, select, archive, integrity check, delete) | done |
+| 7 | Resume parser: PDF/DOCX text extraction and structured extraction (contact, summary, skills, experience, education, certifications, languages) | done |
+| 8 | Resume verification: correction/verify API and a local review page at `/ui/` | done |
 
 ## Run the backend
 
@@ -46,7 +48,19 @@ Data (database, resumes, logs, install token) lives in `~/.local/share/autofill-
 | `GET /api/v1/resumes`, `/current`, `/{id}` | List, current, detail (no on-disk paths exposed) |
 | `POST /api/v1/resumes/{id}/set-current\|archive\|unarchive` | Select / archive |
 | `GET /api/v1/resumes/{id}/integrity` | Confirm the file exists and still matches its SHA-256 |
+| `POST /api/v1/resumes/{id}/parse` | Extract structured data; refuses if the stored file is missing or no longer matches its hash |
+| `GET /api/v1/resumes/{id}/data` | Raw parse, your corrections, and the `effective_data` to use |
+| `PUT /api/v1/resumes/{id}/verified-data` | Save corrections (draft); editing a verified resume un-verifies it |
+| `POST /api/v1/resumes/{id}/verify` | Confirm the data is accurate (uses corrections, else the parse as-is) |
 | `DELETE /api/v1/resumes/{id}` | Remove record and file; application history keeps its filename/hash snapshot |
+
+## Review page
+
+With the agent running, open <http://127.0.0.1:8765/ui/>, paste the installation token (the file `install_token` in the data folder; the path is printed at startup), upload a resume, click **Parse**, correct anything wrong and click **Verify**. The page is plain HTML/JS served by the agent with a strict CSP (own files only, no inline script), builds the DOM with `textContent`, and keeps the token in the tab's session storage only.
+
+## Parser notes
+
+Parsing is deterministic and offline (pypdf for PDF, defusedxml for DOCX). It is a best guess: anything it cannot read is left empty with a warning, never invented (for example certification numbers, language proficiency, or undated positions). Scanned/image-only PDFs are rejected because there is no OCR. Dates are normalized to `YYYY-MM` (or `YYYY` when only a year is given).
 
 ## Security foundations in place
 

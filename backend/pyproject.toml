@@ -13,6 +13,8 @@ dependencies = [
     "sqlalchemy>=2.0",
     "pydantic-settings>=2.2",
     "python-multipart>=0.0.9",
+    "pypdf>=4.2",
+    "defusedxml>=0.7",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +25,9 @@ autofill-agent = "autofill_agent.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["autofill_agent*"]
+
+[tool.setuptools.package-data]
+autofill_agent = ["ui/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

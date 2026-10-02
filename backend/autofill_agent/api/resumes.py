@@ -11,8 +11,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from autofill_agent.api.deps import get_session
-from autofill_agent.api.schemas import ResumeIntegrityOut, ResumeOut
+from autofill_agent.api.schemas import ResumeDataOut, ResumeIntegrityOut, ResumeOut
+from autofill_agent.db.enums import ResumeStatus
 from autofill_agent.db.models import Resume, utcnow
+from autofill_agent.resume_parser import ResumeParseError, parse_resume_file
+from autofill_agent.resume_schema import ResumeData
 from autofill_agent.resume_store import ResumeUploadError, sanitize_filename, save_upload, sha256_of
 from autofill_agent.security import require_token
 
@@ -125,6 +128,81 @@ def integrity(resume_id: int, s: Session = Depends(get_session)) -> ResumeIntegr
         expected_sha256=resume.sha256,
         actual_sha256=actual,
     )
+
+
+def _data_out(resume: Resume) -> ResumeDataOut:
+    return ResumeDataOut(
+        resume_id=resume.id,
+        status=resume.status,
+        verified=resume.status is ResumeStatus.VERIFIED,
+        parsed_data=resume.parsed_data,
+        verified_data=resume.verified_data,
+        effective_data=resume.verified_data or resume.parsed_data,
+    )
+
+
+def _require_intact_file(resume: Resume) -> Path:
+    path = Path(resume.stored_path)
+    actual = sha256_of(path)
+    if actual is None:
+        raise HTTPException(409, "The stored resume file is missing")
+    if actual != resume.sha256:
+        raise HTTPException(409, "The stored resume file no longer matches its SHA-256; re-upload it")
+    return path
+
+
+@router.post("/{resume_id}/parse", response_model=ResumeDataOut)
+def parse_resume(resume_id: int, s: Session = Depends(get_session)) -> ResumeDataOut:
+    """Extract structured data from the stored file (doc §5 step 3).
+
+    Re-parsing replaces the parser output and returns the resume to PARSED (unverified).
+    Any corrections already saved are kept so they are not lost.
+    """
+    resume = _get(s, resume_id)
+    path = _require_intact_file(resume)
+    try:
+        parsed = parse_resume_file(path)
+    except ResumeParseError as e:
+        raise HTTPException(422, str(e)) from None
+    resume.parsed_data = parsed.model_dump(mode="json")
+    resume.parsed_at = utcnow()
+    resume.status = ResumeStatus.PARSED
+    resume.verified_at = None
+    s.commit()
+    return _data_out(resume)
+
+
+@router.get("/{resume_id}/data", response_model=ResumeDataOut)
+def get_resume_data(resume_id: int, s: Session = Depends(get_session)) -> ResumeDataOut:
+    return _data_out(_get(s, resume_id))
+
+
+@router.put("/{resume_id}/verified-data", response_model=ResumeDataOut)
+def save_corrections(resume_id: int, body: ResumeData, s: Session = Depends(get_session)) -> ResumeDataOut:
+    """Save the user's corrected data as a draft. Editing a verified resume returns it to unverified."""
+    resume = _get(s, resume_id)
+    resume.verified_data = body.model_dump(mode="json")
+    resume.verified_at = None
+    resume.status = ResumeStatus.PARSED if resume.parsed_at else ResumeStatus.UPLOADED
+    s.commit()
+    return _data_out(resume)
+
+
+@router.post("/{resume_id}/verify", response_model=ResumeDataOut)
+def verify_resume(resume_id: int, s: Session = Depends(get_session)) -> ResumeDataOut:
+    """The user confirms the data is accurate. Uses saved corrections, or the parse as-is if none."""
+    resume = _get(s, resume_id)
+    _require_intact_file(resume)
+    if resume.verified_data is None:
+        if resume.parsed_data is None:
+            raise HTTPException(409, "Parse the resume (or enter its data) before verifying")
+        data = dict(resume.parsed_data)
+        data.pop("warnings", None)
+        resume.verified_data = ResumeData.model_validate(data).model_dump(mode="json")
+    resume.status = ResumeStatus.VERIFIED
+    resume.verified_at = utcnow()
+    s.commit()
+    return _data_out(resume)
 
 
 @router.delete("/{resume_id}", status_code=status.HTTP_204_NO_CONTENT)

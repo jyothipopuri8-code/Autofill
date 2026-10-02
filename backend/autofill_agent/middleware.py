@@ -21,10 +21,19 @@ SECURITY_HEADERS = {
 }
 
 
+# The bundled review page is served by the agent itself, so it may load only its own files.
+UI_CSP = (
+    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+    "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+)
+
+
 class OriginGuardMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, allowed_origins: list[str]) -> None:
+    def __init__(self, app, allowed_origins: list[str], own_origins: list[str] | None = None) -> None:
         super().__init__(app)
-        self.allowed = set(allowed_origins)
+        # own_origins: this agent's own address, so its bundled UI can call its API.
+        # A web page cannot forge an Origin header, so other sites remain blocked.
+        self.allowed = set(allowed_origins) | set(own_origins or [])
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         origin = request.headers.get("origin")
@@ -32,6 +41,9 @@ class OriginGuardMiddleware(BaseHTTPMiddleware):
             response: Response = JSONResponse({"detail": "Origin not allowed"}, status_code=403)
         else:
             response = await call_next(request)
-        for k, v in SECURITY_HEADERS.items():
+        headers = dict(SECURITY_HEADERS)
+        if request.url.path == "/ui" or request.url.path.startswith("/ui/"):
+            headers["Content-Security-Policy"] = UI_CSP
+        for k, v in headers.items():
             response.headers.setdefault(k, v)
         return response

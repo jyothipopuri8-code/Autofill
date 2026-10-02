@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
@@ -245,3 +245,15 @@ class ResumeIntegrityOut(BaseModel):
     sha256_matches: bool
     expected_sha256: str
     actual_sha256: str | None
+
+
+class ResumeDataOut(BaseModel):
+    """Parsed data, the user's corrected version, and which one downstream code should use."""
+
+    resume_id: int
+    status: ResumeStatus
+    verified: bool
+    parsed_data: dict[str, Any] | None
+    verified_data: dict[str, Any] | None
+    # The verified data when it exists, else the raw parse. Only trust it for filling when ``verified`` is true.
+    effective_data: dict[str, Any] | None

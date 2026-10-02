@@ -8,7 +8,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+from pathlib import Path
 
 from autofill_agent import __version__
 from autofill_agent.api import answers, health, profile, resumes
@@ -61,11 +64,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Authorization", "Content-Type"],
         allow_credentials=False,
     )
-    app.add_middleware(OriginGuardMiddleware, allowed_origins=settings.allowed_origins)
+    app.add_middleware(
+        OriginGuardMiddleware,
+        allowed_origins=settings.allowed_origins,
+        own_origins=[f"http://127.0.0.1:{settings.port}", f"http://localhost:{settings.port}"],
+    )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     app.include_router(health.router)
     app.include_router(profile.router)
     app.include_router(answers.router)
     app.include_router(resumes.router)
+    # Static review page: no personal data in these files, all data comes via the authenticated API.
+    app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "ui", html=True), name="ui")
     return app

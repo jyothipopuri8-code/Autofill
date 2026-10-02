@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autofill Agent</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Autofill Agent</h1>
+    <span id="conn" class="badge">Not connected</span>
+  </header>
+  <main>
+    <section id="auth">
+      <h2>Connect</h2>
+      <p>Paste your installation token. It is the file <code>install_token</code> in the agent's data folder; the agent prints that location when it starts. The token stays in this tab only.</p>
+      <div class="row">
+        <input id="token" type="password" autocomplete="off" placeholder="Installation token" aria-label="Installation token">
+        <button id="connect" class="primary">Connect</button>
+      </div>
+      <p id="auth-msg" class="msg" role="status"></p>
+    </section>
+
+    <section id="resumes" hidden>
+      <h2>Resumes</h2>
+      <p class="hint">Each application can use a different tailored resume. Parse it, check the result, then mark it verified.</p>
+      <div class="row">
+        <input id="file" type="file" accept=".pdf,.docx" aria-label="Resume file (PDF or DOCX)">
+        <button id="upload">Upload</button>
+      </div>
+      <p id="resume-msg" class="msg" role="status"></p>
+      <ul id="resume-list" class="cards"></ul>
+    </section>
+
+    <section id="review" hidden>
+      <h2 id="review-title">Review parsed resume</h2>
+      <p class="hint">Parsed data is a best guess. Fix anything wrong, leave unknown fields empty, then verify. Dates use YYYY-MM (or YYYY).</p>
+      <ul id="warnings" class="warnings"></ul>
+      <form id="form" autocomplete="off"></form>
+      <div class="row">
+        <button id="save">Save corrections</button>
+        <button id="verify" class="primary">Looks correct: verify</button>
+        <button id="close">Close</button>
+      </div>
+      <p id="review-msg" class="msg" role="status"></p>
+    </section>
+  </main>
+</body>
+</html>
