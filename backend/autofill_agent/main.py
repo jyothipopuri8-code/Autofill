@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from autofill_agent import __version__
-from autofill_agent.api import health
+from autofill_agent.api import answers, health, profile, resumes
 from autofill_agent.config import Settings, get_settings
 from autofill_agent.db import Database
 from autofill_agent.logging_setup import configure_logging
@@ -65,4 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     app.include_router(health.router)
+    app.include_router(profile.router)
+    app.include_router(answers.router)
+    app.include_router(resumes.router)
     return app

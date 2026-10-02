@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     # browser origin is accepted until the extension is registered.
     allowed_origins: list[str] = Field(default_factory=list)
 
+    max_resume_bytes: int = Field(default=10 * 1024 * 1024, ge=1024)
+
     log_level: str = "INFO"
     developer_mode: bool = False
 
