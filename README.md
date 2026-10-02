@@ -33,7 +33,7 @@ docs/        SECURITY.md, WINDOWS.md, VALIDATION.md (real-site checklist)
 | 38-39 | Application history and duplicate detection | done |
 | 40 | Security hardening ([docs/SECURITY.md](docs/SECURITY.md)) | done |
 | 41 | Testing: backend, extension unit, browser end-to-end | done (see below) |
-| 42 | Windows packaging ([docs/WINDOWS.md](docs/WINDOWS.md)) | written; **not yet run on real Windows** |
+| 42 | Windows packaging ([docs/WINDOWS.md](docs/WINDOWS.md)) | scripts and standalone agent pass on a GitHub Windows runner; **not yet run on a personal Windows PC** |
 | 43 | Real-site validation ([docs/VALIDATION.md](docs/VALIDATION.md)) | **needs you**: a checklist to run on real sites |
 
 The ATS adapters are validated against mock pages that imitate each system. Real sites differ, so expect to find issues in Phase 43.

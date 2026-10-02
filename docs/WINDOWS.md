@@ -1,8 +1,9 @@
 # Running on Windows (Phase 42)
 
-> **Status: written but not yet run on a real Windows machine.** The PowerShell scripts parse cleanly, their helper functions were
-> exercised under PowerShell 7 on Linux, and the standalone-agent build (PyInstaller) was built and smoke-tested on Linux. The CI job
-> `Windows scripts` runs them on a real Windows runner. Treat the first run on your own computer as the test and tell us what breaks.
+> **Status:** `install.ps1`, `package.ps1 -Exe`, the standalone `autofill-agent.exe` (starts, answers on 127.0.0.1, serves the review page) and
+> the backend tests all passed on a GitHub-hosted Windows runner (CI job `Windows scripts`, 2026-10-02). They have **not** yet been run on a
+> personal Windows computer, and `autostart.ps1`, `uninstall.ps1`, the browser extension on Windows Chrome/Edge, and SmartScreen behaviour
+> have not been exercised anywhere. Treat the first run on your own computer as the test and tell us what breaks.
 
 Everything runs for the current user. No administrator rights are needed and nothing listens on any address except `127.0.0.1:8765`.
 
@@ -61,7 +62,7 @@ Then delete the folder and remove the extension from `chrome://extensions`.
 
 ## What still needs a Windows run
 
-- `install.ps1` / `start-agent.ps1` / `autostart.ps1` on a clean Windows 10 and 11 user.
+- `start-agent.ps1`, `autostart.ps1` and `uninstall.ps1` on a real Windows 10 and 11 user (CI covers install, packaging and the standalone agent only).
 - Owner-only permissions on the data folder (the code sets POSIX modes; on Windows it relies on the default per-user ACL of `%LOCALAPPDATA%`).
-- The PyInstaller build on Windows (`package.ps1 -Exe`), and how SmartScreen treats it.
+- How SmartScreen and antivirus treat the unsigned `autofill-agent.exe` (the build itself passes in CI).
 - Chrome and Edge loading the same `dist` folder.
