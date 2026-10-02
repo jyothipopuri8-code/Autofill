@@ -6,11 +6,22 @@
   <title>Autofill Agent</title>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
+  <script src="profile.js" defer></script>
+  <script src="answers.js" defer></script>
+  <script src="history.js" defer></script>
+  <script src="settings.js" defer></script>
 </head>
 <body>
   <header>
     <h1>Autofill Agent</h1>
     <span id="conn" class="badge">Not connected</span>
+    <nav id="tabs" hidden aria-label="Sections">
+      <button type="button" data-tab="history">Applications</button>
+      <button type="button" data-tab="resumes">Resumes</button>
+      <button type="button" data-tab="profile">Profile</button>
+      <button type="button" data-tab="answers">Answers</button>
+      <button type="button" data-tab="settings">Settings</button>
+    </nav>
   </header>
   <main>
     <section id="auth">
@@ -23,7 +34,7 @@
       <p id="auth-msg" class="msg" role="status"></p>
     </section>
 
-    <section id="resumes" hidden>
+    <section id="resumes" data-panel hidden>
       <h2>Resumes</h2>
       <p class="hint">Each application can use a different tailored resume. Parse it, check the result, then mark it verified.</p>
       <div class="row">
@@ -32,6 +43,78 @@
       </div>
       <p id="resume-msg" class="msg" role="status"></p>
       <ul id="resume-list" class="cards"></ul>
+    </section>
+
+    <section id="history" data-panel hidden>
+      <h2>Applications</h2>
+      <p class="hint">Every application the agent has prepared. Only you set the final status; the agent never submits for you.</p>
+      <div class="row">
+        <select id="h-status" aria-label="Filter by status"><option value="">All statuses</option></select>
+        <input id="h-search" type="text" placeholder="Search company or title" aria-label="Search applications">
+        <button id="h-refresh" type="button">Refresh</button>
+      </div>
+      <p id="h-msg" class="msg" role="status"></p>
+      <ul id="h-list" class="cards"></ul>
+    </section>
+
+    <section id="profile" data-panel hidden>
+      <h2>Profile</h2>
+      <p class="hint">Facts the agent may use on every application. Leave a field empty if you would rather be asked. Nothing here is sent anywhere except to forms you start an application on.</p>
+      <form id="profile-form" autocomplete="off"></form>
+      <div class="row"><button id="profile-save" class="primary" type="button">Save profile</button></div>
+      <p id="profile-msg" class="msg" role="status"></p>
+      <h2>Sensitive questions</h2>
+      <p class="hint">Gender, race, disability, veteran status and similar questions. The default is to ask you every time. Choose "Always answer" only for a value you are comfortable giving on every application.</p>
+      <ul id="sensitive-list" class="cards"></ul>
+      <p id="sensitive-msg" class="msg" role="status"></p>
+    </section>
+
+    <section id="answers" data-panel hidden>
+      <h2>Answer library</h2>
+      <p class="hint">Reusable factual answers such as desired salary or willingness to relocate. A policy decides whether the agent may fill it, ask you, or never fill it.</p>
+      <ul id="library-list" class="cards"></ul>
+      <fieldset id="library-form">
+        <legend>Add or change an answer</legend>
+        <div class="grid">
+          <label>Key<input id="a-key" type="text" list="a-keys" placeholder="desired_salary" autocomplete="off"></label>
+          <datalist id="a-keys"></datalist>
+          <label>Category<input id="a-category" type="text" placeholder="compensation"></label>
+          <label>Policy<select id="a-policy"><option value="ASK_ME">Ask me each time</option><option value="AUTOFILL">Fill automatically</option><option value="NEVER_FILL">Never fill</option></select></label>
+          <label>Verified<select id="a-verified"><option value="UNVERIFIED">Not verified</option><option value="VERIFIED">Verified by me</option></select></label>
+        </div>
+        <label>Value<textarea id="a-value"></textarea></label>
+        <label>Notes (only you see these)<input id="a-notes" type="text"></label>
+        <div class="row"><button id="a-save" class="primary" type="button">Save answer</button><button id="a-clear" type="button">Clear form</button></div>
+        <p id="a-msg" class="msg" role="status"></p>
+      </fieldset>
+      <h2>Remembered answers</h2>
+      <p class="hint">Answers you approved while applying. They are reused only for the same question, and are dropped if the resume or profile they depended on changes. Forget any you no longer want.</p>
+      <ul id="memory-list" class="cards"></ul>
+      <p id="memory-msg" class="msg" role="status"></p>
+    </section>
+
+    <section id="settings" data-panel hidden>
+      <h2>Operating mode</h2>
+      <fieldset id="mode-box"></fieldset>
+      <p id="mode-msg" class="msg" role="status"></p>
+      <h2>Local AI</h2>
+      <p id="ai-status" class="hint"></p>
+      <h2>Your data</h2>
+      <p class="hint">Everything lives on this computer. Export a copy, or erase it. Erasing cannot be undone.</p>
+      <div class="row"><button id="export" type="button">Export data (JSON)</button></div>
+      <fieldset>
+        <legend>Erase data</legend>
+        <div class="row">
+          <select id="erase-scope" aria-label="What to erase">
+            <option value="applications">Application history</option>
+            <option value="memory">Remembered answers</option>
+            <option value="all">Everything (profile, answers, resumes, history)</option>
+          </select>
+          <input id="erase-confirm" type="text" placeholder='Type DELETE MY DATA' aria-label="Confirmation phrase">
+          <button id="erase" class="danger" type="button">Erase</button>
+        </div>
+        <p id="erase-msg" class="msg" role="status"></p>
+      </fieldset>
     </section>
 
     <section id="review" hidden>

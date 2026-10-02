@@ -78,6 +78,8 @@ button:disabled{opacity:.5;cursor:default}
 .banner.bad{border-color:var(--bad)}.banner.warn{border-color:var(--warn)}
 .card{padding:8px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);display:flex;flex-direction:column;gap:6px}
 .card h4{margin:0;font-size:13px}
+h4.sec{margin:4px 0 0;font-size:13px}
+ul.plain{list-style:none;padding:0}
 .card button{align-self:flex-start}
 .card .why{color:var(--mut);font-size:12px}
 .card .val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;word-break:break-word}
@@ -247,7 +249,7 @@ export class Panel {
     }
 
     if (m.attention.length) {
-      body.append(h("h4", { style: "margin:4px 0 0" }, `Needs your attention (${m.attention.length})`));
+      body.append(h("h4", { class: "sec" }, `Needs your attention (${m.attention.length})`));
       for (const it of m.attention) body.append(this.attentionCard(it, m));
     } else if (m.counts && m.counts.detected) {
       body.append(h("div", { class: "banner" }, "Nothing needs your attention on this page right now."));
@@ -288,7 +290,7 @@ export class Panel {
 
   private finalBox(f: NonNullable<PanelModel["final"]>): HTMLElement {
     const box = h("div", { class: `banner ${f.ready ? "" : "warn"}` }, h("b", {}, f.headline));
-    const ul = h("ul", { style: "list-style:none;padding:0" });
+    const ul = h("ul", { class: "plain" });
     for (const c of f.checks) ul.append(h("li", { class: `ck ${c.ok ? "ok" : "bad"}` }, h("span", {}, c.ok ? "✓" : "✗"), h("span", {}, c.label + (c.detail ? `: ${c.detail}` : ""))));
     box.append(ul, h("div", { class: "tag" }, f.note));
     return box;

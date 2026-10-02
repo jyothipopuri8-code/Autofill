@@ -14,7 +14,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pathlib import Path
 
 from autofill_agent import __version__
-from autofill_agent.api import answers, applications, health, profile, resumes, sessions, settings_api
+from autofill_agent.api import answers, applications, data, health, profile, resumes, sessions, settings_api
 from autofill_agent.config import Settings, get_settings
 from autofill_agent.db import Database
 from autofill_agent.logging_setup import configure_logging
@@ -83,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(applications.router)
     app.include_router(settings_api.router)
+    app.include_router(data.router)
     # Static review page: no personal data in these files, all data comes via the authenticated API.
     app.mount("/ui", StaticFiles(directory=Path(__file__).parent / "ui", html=True), name="ui")
     return app

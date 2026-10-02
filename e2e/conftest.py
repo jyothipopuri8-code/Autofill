@@ -228,3 +228,28 @@ def session(browser, agent, sites):
         return Session(browser, agent, page, f"{sites}/{path}#tab{count[0]}")
 
     return make
+
+
+@pytest.fixture
+def dash(agent):
+    """The agent's own dashboard in a plain Chromium (no extension), collecting console errors."""
+    from playwright.sync_api import sync_playwright
+
+    exe = _chromium()
+    if exe is None:
+        pytest.skip("no Chromium found (set CHROMIUM_PATH)")
+    with sync_playwright() as p:
+        b = p.chromium.launch(executable_path=exe, args=["--no-sandbox"])
+        ctx = b.new_context(accept_downloads=True)
+        page = ctx.new_page()
+        page.set_default_timeout(10000)
+        errors: list[str] = []
+        page.on("console", lambda m: errors.append(m.text) if m.type in ("error", "warning") else None)
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.errors = errors  # type: ignore[attr-defined]
+        page.goto(f"{agent.base}/ui/")
+        page.fill("#token", agent.token)
+        page.click("#connect")
+        page.wait_for_selector("#tabs:not([hidden])")
+        yield page
+        b.close()

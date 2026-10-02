@@ -41,3 +41,15 @@ label.check input { width: auto; }
 .entry { border-top: 1px dashed var(--line); padding-top: 10px; margin-top: 10px; }
 .entry:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
 [hidden] { display: none !important; }
+
+nav { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+nav button { border-color: transparent; background: transparent; color: var(--muted); }
+nav button[aria-current="page"] { color: var(--fg); border-color: var(--line); background: var(--card); font-weight: 600; }
+select { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; max-width: 100%; }
+.cards li .row { margin: 4px 0; }
+.kv { display: grid; grid-template-columns: 160px 1fr; gap: 2px 10px; font-size: 13px; margin-top: 6px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; word-break: break-word; }
+.tri { min-width: 140px; }
+input[type=date] { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg); font: inherit; }
+label.check.roomy { padding-top: 6px; }
+h3.sub { font-size: 14px; margin: 10px 0 2px; }

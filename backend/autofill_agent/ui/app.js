@@ -1,5 +1,5 @@
-// Local review page. Talks only to this agent (same origin). Builds the DOM with
-// createElement/textContent so resume text is never interpreted as HTML.
+// Local dashboard: resumes, profile, answers, history and settings. Talks only to this agent (same
+// origin). Builds the DOM with createElement/textContent so stored text is never interpreted as HTML.
 "use strict";
 
 const API = "/api/v1";
@@ -17,6 +17,9 @@ function h(tag, attrs, ...kids) {
   for (const kid of kids) el.append(kid);
   return el;
 }
+
+// Tabs register a loader here; the dashboard calls it when the tab opens.
+const Dash = { tabs: {}, register(name, load) { this.tabs[name] = load; }, api: null, h: null, say: null, errorText: null };
 
 function say(id, text, kind) {
   const el = $(id);
@@ -44,10 +47,21 @@ async function api(path, opts = {}) {
 
 // --- Connection ---------------------------------------------------------------
 
+function showTab(name) {
+  if (!Dash.tabs[name]) name = "resumes";
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.id !== name;
+  if (name !== "resumes") $("review").hidden = true;
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-current", b.dataset.tab === name ? "page" : "false");
+  try { sessionStorage.setItem("agentTab", name); } catch (e) { /* ignore */ }
+  Promise.resolve(Dash.tabs[name]()).catch((e) => { if (e.message !== "Not authorized") console.error(e); });
+}
+
 function showAuth(msg) {
   token = "";
   try { sessionStorage.removeItem("agentToken"); } catch (e) { /* ignore */ }
-  $("auth").hidden = false; $("resumes").hidden = true; $("review").hidden = true;
+  $("auth").hidden = false; $("tabs").hidden = true;
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = true;
+  $("review").hidden = true;
   $("conn").textContent = "Not connected"; $("conn").className = "badge";
   say("auth-msg", msg, "err");
 }
@@ -59,9 +73,11 @@ async function connect() {
     await api("/status");
     try { sessionStorage.setItem("agentToken", token); } catch (e) { /* ignore */ }
     $("token").value = "";
-    $("auth").hidden = true; $("resumes").hidden = false;
+    $("auth").hidden = true; $("tabs").hidden = false;
     $("conn").textContent = "Connected"; $("conn").className = "badge ok";
-    await loadResumes();
+    let tab = "";
+    try { tab = sessionStorage.getItem("agentTab") || ""; } catch (e) { /* ignore */ }
+    showTab(tab || "resumes");
   } catch (e) {
     if (e.message !== "Not authorized") showAuth("Cannot reach the agent: " + e.message);
   }
@@ -260,4 +276,7 @@ $("verify").addEventListener("click", async () => {
   } catch (e) { say("review-msg", e.message, "err"); }
 });
 
-if (token) connect();
+Dash.api = api; Dash.h = h; Dash.say = say; Dash.errorText = errorText;
+Dash.register("resumes", loadResumes);
+for (const b of document.querySelectorAll("#tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
+window.addEventListener("DOMContentLoaded", () => { if (token) connect(); });
