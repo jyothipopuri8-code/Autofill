@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Data Platform Engineer | Fabrikam Careers</title>
+  <!-- Modelled on an iCIMS "classic" application page: iCIMS_ class names, label and field in separate table cells,
+       dotted field names, required marked in the label, Next / Submit as submit inputs. Built from memory of the
+       real markup, not copied from a live page. -->
+  <style>body{font:15px system-ui;max-width:760px;margin:24px auto;padding:0 16px}table{width:100%;border-collapse:collapse}td,th{padding:8px;text-align:left;vertical-align:top}input[type=text],input[type=email],input[type=tel],select,textarea{width:100%;padding:6px;box-sizing:border-box}</style>
+</head>
+<body>
+  <div class="iCIMS_MainWrapper" id="iCIMS_MainWrapper">
+    <div class="iCIMS_Header"><h1 class="iCIMS_JobTitle">Data Platform Engineer</h1></div>
+    <div class="iCIMS_JobContent"><p>Fabrikam is looking for a Data Platform Engineer to build and operate the pipelines that feed analytics and machine learning across the company. You will work closely with data scientists, set quality standards and improve the reliability of our warehouse.</p></div>
+    <form id="icims_form" class="iCIMS_Form" action="#" method="post">
+      <table class="iCIMS_Table">
+        <tr><th><label for="PersonProfileFields.FirstName_1">First Name <span class="iCIMS_Required">*</span></label></th>
+            <td><input type="text" id="PersonProfileFields.FirstName_1" name="PersonProfileFields.FirstName" required></td></tr>
+        <tr><th><label for="PersonProfileFields.LastName_1">Last Name <span class="iCIMS_Required">*</span></label></th>
+            <td><input type="text" id="PersonProfileFields.LastName_1" name="PersonProfileFields.LastName" required></td></tr>
+        <tr><th><label for="PersonProfileFields.Email_1">Email Address <span class="iCIMS_Required">*</span></label></th>
+            <td><input type="email" id="PersonProfileFields.Email_1" name="PersonProfileFields.Email" required></td></tr>
+        <tr><th><label for="PersonProfileFields.PhoneNumber_1">Phone</label></th>
+            <td><input type="tel" id="PersonProfileFields.PhoneNumber_1" name="PersonProfileFields.PhoneNumber"></td></tr>
+        <tr><th><label for="PersonProfileFields.AddressCity_1">City</label></th>
+            <td><input type="text" id="PersonProfileFields.AddressCity_1" name="PersonProfileFields.AddressCity"></td></tr>
+        <tr><th><label for="PersonProfileFields.AddressState_1">State/Province</label></th>
+            <td><select id="PersonProfileFields.AddressState_1" name="PersonProfileFields.AddressState">
+              <option value="">Please select</option><option value="CA-0">California</option><option value="TX-0">Texas</option><option value="NY-0">New York</option>
+            </select></td></tr>
+        <tr><th><label for="resume_1">Resume <span class="iCIMS_Required">*</span></label></th>
+            <td><input type="file" id="resume_1" name="resume"></td></tr>
+        <tr><th><label for="auth_yes">Are you legally authorized to work in the United States? <span class="iCIMS_Required">*</span></label></th>
+            <td><input type="radio" id="auth_yes" name="auth" value="1"><label for="auth_yes">Yes</label>
+                <input type="radio" id="auth_no" name="auth" value="0"><label for="auth_no">No</label></td></tr>
+        <tr><th><label for="q_comp_1">What are your salary expectations?</label></th>
+            <td><input type="text" id="q_comp_1" name="q_comp"></td></tr>
+      </table>
+      <div class="iCIMS_ButtonRow"><input type="submit" id="next" class="iCIMS_PrimaryButton" value="Submit"></div>
+    </form>
+  </div>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("icims_form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+  </script>
+</body>
+</html>

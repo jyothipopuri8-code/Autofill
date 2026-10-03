@@ -186,3 +186,36 @@ def test_ashby_like_yes_no_choice_made_by_the_person_is_kept(session, agent):
     s.click("Fill")
     s.wait_filled()
     assert s.page.evaluate("window.__answers()")["q-auth"] == "No"
+
+
+def test_smartrecruiters_like_web_components_in_open_shadow_roots(session, agent):
+    s = session("smartrecruiters.html")
+    fill_all(s)
+    page = s.page
+    app = agent.api("GET", "/api/v1/sessions").json()[0]["application"]
+    assert app["ats"] == "SMARTRECRUITERS" and "Staff Platform Engineer" in app["job_title"]
+    vals = page.evaluate("""() => Object.fromEntries(['first', 'last', 'email', 'phone', 'country', 'auth', 'why'].map(id => [id, document.getElementById(id).value]))""")
+    assert vals["first"] == "Jane" and vals["last"] == "Doe" and vals["email"] == "jane.doe@example.com"
+    assert vals["phone"].replace("-", "").replace("(", "").replace(")", "").replace(" ", "") == "5551234567"
+    assert vals["country"] == "US", "the select inside the component's shadow root was not set"
+    assert vals["auth"] == "yes", "the radio choice never reached the component"
+    assert page.evaluate("document.getElementById('resume').fileName") == "Jane.pdf"
+    assert vals["why"] == ""
+    assert "Why do you want to work at Contoso Labs?" in s.panel_text()
+    assert page.evaluate("window.__submitClicks") == 0
+
+
+def test_icims_like_classic_table_layout(session, agent):
+    s = session("icims.html")
+    fill_all(s)
+    page = s.page
+    app = agent.api("GET", "/api/v1/sessions").json()[0]["application"]
+    assert app["ats"] == "ICIMS" and "Data Platform Engineer" in app["job_title"]
+    q = lambda name: page.input_value(f"[name='PersonProfileFields.{name}']")
+    assert q("FirstName") == "Jane" and q("LastName") == "Doe" and q("Email") == "jane.doe@example.com"
+    assert q("AddressCity") == "Austin"
+    assert q("AddressState") == "TX-0", "state option values are site specific; the label must decide"
+    assert page.is_checked("#auth_yes") and not page.is_checked("#auth_no")
+    assert page.evaluate("document.getElementById('resume_1').files[0]?.name") == "Jane.pdf"
+    assert page.input_value("[name=q_comp]") == "", "salary expectations must be left for the person"
+    assert page.evaluate("window.__submitClicks") == 0

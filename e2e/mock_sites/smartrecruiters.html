@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Staff Platform Engineer - Contoso Labs - SmartRecruiters</title>
+  <meta property="og:site_name" content="Contoso Labs">
+  <!-- Modelled on SmartRecruiters' one-click application: form controls are web components (spl-*) whose label and
+       input live inside open shadow roots. Built from memory of the real markup, not copied from a live page. -->
+  <style>body{font:15px system-ui;max-width:680px;margin:24px auto;padding:0 16px}spl-input,spl-select,spl-textarea,spl-radio-group,spl-dropzone{display:block;margin:14px 0}</style>
+</head>
+<body>
+  <h1 class="job-title">Staff Platform Engineer</h1>
+  <p>Contoso Labs is hiring a Staff Platform Engineer to design and operate the compute platform that powers our products. You will own reliability targets, improve developer tooling and mentor engineers across several teams.</p>
+  <oc-oneclick-form>
+    <form id="form" novalidate>
+      <spl-input id="first" name="firstName" label="First name" required></spl-input>
+      <spl-input id="last" name="lastName" label="Last name" required></spl-input>
+      <spl-input id="email" name="email" label="Email" type="email" required></spl-input>
+      <spl-input id="phone" name="phoneNumber" label="Phone number" type="tel"></spl-input>
+      <spl-select id="country" name="country" label="Country" required>
+        <option value="">Select</option><option value="US">United States</option><option value="CA">Canada</option><option value="GB">United Kingdom</option>
+      </spl-select>
+      <spl-dropzone id="resume" name="resume" label="Resume" required></spl-dropzone>
+      <spl-radio-group id="auth" name="auth" label="Are you legally authorized to work in the United States?" required>
+        <option value="yes">Yes</option><option value="no">No</option>
+      </spl-radio-group>
+      <spl-textarea id="why" name="why" label="Why do you want to work at Contoso Labs?" required></spl-textarea>
+      <button type="submit" id="submit">Submit application</button>
+    </form>
+  </oc-oneclick-form>
+  <script>
+    window.__submitClicks = 0;
+    document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    let n = 0;
+    const uid = (p) => `${p}-${++n}`;
+    const shell = (host, inner) => {
+      const root = host.attachShadow({ mode: "open" });
+      root.innerHTML = inner;
+      return root;
+    };
+    const star = (host) => (host.hasAttribute("required") ? " *" : "");
+
+    // A text-like component. Like real ones it keeps its own `value` state, updated from the inner input's events.
+    class SplInput extends HTMLElement {
+      connectedCallback() {
+        const id = uid("in");
+        const root = shell(this, `<label for="${id}"></label><input id="${id}" type="${this.getAttribute("type") || "text"}" style="width:100%;padding:8px;box-sizing:border-box">`);
+        root.querySelector("label").textContent = this.getAttribute("label") + star(this);
+        const input = root.querySelector("input");
+        input.addEventListener("input", () => { this.value = input.value; });
+        this.value = "";
+      }
+    }
+    class SplTextarea extends HTMLElement {
+      connectedCallback() {
+        const id = uid("ta");
+        const root = shell(this, `<label for="${id}"></label><textarea id="${id}" style="width:100%;padding:8px;box-sizing:border-box"></textarea>`);
+        root.querySelector("label").textContent = this.getAttribute("label") + star(this);
+        const ta = root.querySelector("textarea");
+        ta.addEventListener("input", () => { this.value = ta.value; });
+        this.value = "";
+      }
+    }
+    class SplSelect extends HTMLElement {
+      connectedCallback() {
+        const id = uid("sel");
+        const root = shell(this, `<label for="${id}"></label><select id="${id}" style="width:100%;padding:8px"></select>`);
+        root.querySelector("label").textContent = this.getAttribute("label") + star(this);
+        const sel = root.querySelector("select");
+        for (const o of Array.from(this.querySelectorAll("option"))) sel.append(o.cloneNode(true));
+        sel.addEventListener("change", () => { this.value = sel.value; });
+        this.value = "";
+      }
+    }
+    // One radio per component, each in its own shadow root (the browser cannot group those), so the component unchecks the others.
+    class SplRadioGroup extends HTMLElement {
+      connectedCallback() {
+        const root = shell(this, `<fieldset><legend></legend><div class="opts"></div></fieldset>`);
+        root.querySelector("legend").textContent = this.getAttribute("label") + star(this);
+        const name = this.getAttribute("name");
+        const host = this;
+        this.value = "";
+        for (const o of Array.from(this.querySelectorAll("option"))) {
+          const wrap = document.createElement("spl-radio");
+          const r = wrap.attachShadow({ mode: "open" });
+          const id = uid("rd");
+          r.innerHTML = `<input type="radio" id="${id}" name="${name}" value="${o.value}"><label for="${id}"></label>`;
+          r.querySelector("label").textContent = o.textContent;
+          r.querySelector("input").addEventListener("change", (e) => {
+            host.shadowRoot.querySelectorAll("spl-radio").forEach((x) => { x.shadowRoot.querySelector("input").checked = x === wrap; });
+            host.value = e.target.value;
+          });
+          root.querySelector(".opts").append(wrap);
+        }
+      }
+    }
+    class SplDropzone extends HTMLElement {
+      connectedCallback() {
+        const root = shell(this, `<div class="lbl"></div><button type="button" id="pick">Upload a file</button><span id="fname"></span><input type="file" style="display:none">`);
+        root.querySelector(".lbl").textContent = this.getAttribute("label") + star(this);
+        const input = root.querySelector("input");
+        root.querySelector("#pick").addEventListener("click", () => input.click());
+        input.addEventListener("change", () => { root.querySelector("#fname").textContent = input.files[0]?.name || ""; this.fileName = input.files[0]?.name || ""; });
+      }
+    }
+    for (const [tag, cls] of [["spl-input", SplInput], ["spl-textarea", SplTextarea], ["spl-select", SplSelect], ["spl-radio-group", SplRadioGroup], ["spl-dropzone", SplDropzone]]) customElements.define(tag, cls);
+  </script>
+</body>
+</html>

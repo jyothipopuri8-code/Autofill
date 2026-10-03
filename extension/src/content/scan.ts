@@ -71,8 +71,10 @@ function controlVisible(el: HTMLElement): boolean {
   if (type === "radio" || type === "checkbox" || type === "file") {
     const labels = (el as HTMLInputElement).labels;
     if (labels && Array.from(labels).some((l) => isVisible(l))) return true;
-    let p: HTMLElement | null = el.parentElement;
-    for (let i = 0; p && i < 3; i++, p = p.parentElement) if (isVisible(p) && p.getClientRects().length) return true;
+    // Inside a web component the first "parent" is the component itself (the input sits directly in its shadow root).
+    const up = (n: HTMLElement): HTMLElement | null => n.parentElement ?? (n.getRootNode() instanceof ShadowRoot ? ((n.getRootNode() as ShadowRoot).host as HTMLElement) : null);
+    let p: HTMLElement | null = up(el);
+    for (let i = 0; p && i < 3; i++, p = up(p)) if (isVisible(p) && p.getClientRects().length) return true;
   }
   return false;
 }
