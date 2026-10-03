@@ -296,6 +296,62 @@ def _approved_candidate(canonical: str | None, qhash: str | None, ctx: Context) 
     return None
 
 
+# A resume uploader that makes the site parse the file and prefill its own fields. Using it as well as the Resume field
+# would upload the file twice and let the site overwrite what the agent entered.
+_SITE_AUTOFILL = re.compile(r"\bauto-?\s?fill\b|\bpre-?\s?fill\b|\bimport (from|your) (resume|cv|linkedin)\b")
+
+_US_NAMED = re.compile(r"\bU\.S\.A?\.?|\bUSA\b|\bUS\b|\bunited states\b", re.I)
+_US_CASE = re.compile(r"\bU\.S\.A?\.?|\bUSA\b|\bUS\b")  # bare "us" is a pronoun, so only the capitalised form counts
+_FOREIGN = re.compile(
+    r"\b(canada|canadian|united kingdom|u\.k\.|uk|england|scotland|ireland|germany|france|spain|italy|netherlands|belgium|austria|switzerland|"
+    r"sweden|norway|denmark|finland|poland|portugal|india|pakistan|bangladesh|china|japan|korea|singapore|philippines|vietnam|australia|"
+    r"new zealand|israel|turkey|brazil|argentina|colombia|chile|peru|nigeria|kenya|south africa|egypt|eu|european union|emea|apac|latam|"
+    r"(?<!new )mexico|costa rica|ukraine|romania|czech republic|hungary|greece)\b", re.I)
+_ROLE_COUNTRY = re.compile(
+    r"\b(country|nation|jurisdiction) (where|in which|of) (this|the|our) (role|job|position|work|office)\b|"
+    r"\bwhere (this|the) (role|job|position) is (located|based)\b|\b(role|job|position)'?s? (location|country)\b", re.I)
+_REMOTE_ONLY = re.compile(r"^\W*(remote|anywhere|worldwide|global|hybrid|flexible|distributed|work from home|wfh)\W*$", re.I)
+_US_STATE_CODES = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS",
+    "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV",
+    "WI", "WY", "DC",
+}
+
+
+def _job_in_us(location: str | None) -> bool | None:
+    """True / False when the posting's location says so, None when it does not (blank, or just 'Remote')."""
+    loc = (location or "").strip()
+    if not loc or _REMOTE_ONLY.match(loc):
+        return None
+    if _FOREIGN.search(loc) and not _US_NAMED.search(loc):
+        return False
+    if _US_CASE.search(loc) or re.search(r"united states", loc, re.I):
+        return True
+    if re.search(r",\s*(" + "|".join(sorted(_US_STATE_CODES)) + r")\b", loc):
+        return True
+    return None
+
+
+def _work_auth_scope_problem(qtext: str, job_location: str | None) -> str | None:
+    """Work-authorization answers in the profile are for the United States. Return why one must not be used here, if so."""
+    us = bool(_US_CASE.search(qtext) or re.search(r"united states", qtext, re.I))
+    foreign = _FOREIGN.search(qtext)
+    if foreign and not us:
+        return f"This asks about {foreign.group(0).title()}; your profile's work authorization is for the United States"
+    if foreign and us:
+        return "This asks about more than one country, so it needs your own answer"
+    if us:
+        return None
+    if _ROLE_COUNTRY.search(qtext):
+        where = _job_in_us(job_location)
+        if where is True:
+            return None
+        if where is False:
+            return f"The role is in {job_location}; your profile's work authorization is for the United States"
+        return "This asks about the country where the role is located, and this page does not say which country that is"
+    return None
+
+
 def get_candidate(canonical: str | None, d: FieldDescriptor, ctx: Context, qhash: str | None, qtext: str):
     """Walk the priority list. Returns Candidate, ("skip"|"unknown"|"block", reason) or None."""
     spec = BY_KEY.get(canonical) if canonical else None
@@ -330,6 +386,9 @@ def get_candidate(canonical: str | None, d: FieldDescriptor, ctx: Context, qhash
     if canonical in WORK_AUTH_FIELDS:
         if not ctx.work_auth_verified:
             return ("unknown", "Work authorization is not marked verified in your profile")
+        problem = _work_auth_scope_problem(qtext or "", ctx.job.get("location"))
+        if problem:
+            return ("unknown", problem)
         v = _bool_text(_profile_value(canonical, ctx))
         return Candidate(v, AnswerSource.PROFILE, 1.0, "Verified profile", boolean=True) if v else ("unknown", "Not provided in your profile")
 
@@ -351,6 +410,11 @@ def get_candidate(canonical: str | None, d: FieldDescriptor, ctx: Context, qhash
         if isinstance(pv, date):
             return Candidate(pv.isoformat(), AnswerSource.PROFILE, 1.0, "Your profile", iso_date=True)
         return Candidate(str(pv), AnswerSource.PROFILE, 1.0, "Your profile")
+
+    # No preferred name saved: offer the first name as a suggestion to accept, never as an answer to fill.
+    if canonical == "personal.preferred_name" and ctx.profile.get("first_name"):
+        return Candidate(str(ctx.profile["first_name"]), AnswerSource.PROFILE, 1.0,
+                         "No preferred name is saved in your profile; suggesting your first name", suggestion_only=True)
 
     # Resume as fallback for contact details (and conflicts are handled by the caller)
     rv = _resume_contact(ctx, canonical)
@@ -467,6 +531,9 @@ def resolve_field(d: FieldDescriptor, ctx: Context, ats: str | None = None) -> F
     if spec and spec.category == "legal":
         return _new(d, match, qhash, action="user_action", status=FieldStatus.USER_ACTION_REQUIRED,
                     reason="Legal acknowledgements and signatures must be completed by you")
+    if d.kind == "file" and _SITE_AUTOFILL.search(" ".join(x for x in (d.label, d.aria_label, d.nearby_text, d.legend) if x).lower()):
+        return _new(d, match, qhash, action="skip", status=FieldStatus.SKIPPED,
+                    reason="The site's own resume autofill. The agent fills the fields itself and attaches your resume in the Resume field")
     if canonical == "other.cover_letter" or (d.kind == "file" and canonical != "resume.file"):
         return _new(d, match, qhash, action="user_action", status=FieldStatus.USER_ACTION_REQUIRED, reason="Upload this file yourself")
     if canonical == "resume.file":

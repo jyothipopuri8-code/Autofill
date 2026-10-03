@@ -3,7 +3,7 @@
 import type { FieldDescriptor, Kind, Option } from "../shared/types";
 import type { Adapter } from "./adapters/base";
 import { choiceOn, choiceValue, cleanLabel, collapse, hash, isVisible, norm, ownText } from "./dom";
-import { labelInfo, looksRequired, optionLabel } from "./labels";
+import { labelInfo, looksRequired, nearbyEl, optionLabel } from "./labels";
 import { OwnershipTracker } from "./ownership";
 import { assignSections, HEADING_SELECTOR, isHeadingEl } from "./sections";
 
@@ -47,8 +47,15 @@ export function deepAll(root: ParentNode, selector: string): HTMLElement[] {
   return out;
 }
 
+/** True for anything inside the agent's own panel, including its shadow root (open in the test build). */
 function inOwnUi(el: Element): boolean {
-  return !!el.closest(`[${HOST_ATTR}]`);
+  let node: Node | null = el;
+  while (node) {
+    if (node instanceof Element && node.closest(`[${HOST_ATTR}]`)) return true;
+    const root: Node = node.getRootNode();
+    node = root instanceof ShadowRoot ? root.host : null;
+  }
+  return false;
 }
 
 function rawLabelText(el: HTMLElement): string {
@@ -100,7 +107,8 @@ export function customCurrent(el: HTMLElement): string {
       if (sv && sv.textContent) return collapse(sv.textContent, 300);
     }
     // Otherwise whatever text the control shows besides its placeholder and open menu.
-    const ctl = el.closest("[class*='control' i]") ?? el.parentElement;
+    // (Only a wrapper that is itself the control: the plain parent also holds the question's label and help text.)
+    const ctl = el.closest("[class*='control' i]");
     if (ctl) {
       const clone = ctl.cloneNode(true) as HTMLElement;
       clone.querySelectorAll("input,select,button,svg,[role=listbox],[class*='placeholder' i]").forEach((n) => n.remove());
@@ -359,7 +367,8 @@ export class Scanner {
     d.nearby_text = info.nearby_text;
     d.label = info.legend || info.nearby_text || null;
     d.options = buttons.map((b) => ({ value: choiceValue(b), label: collapse(b.textContent, 200) }));
-    d.required = looksRequired(parent, `${d.label ?? ""} ${parent.parentElement?.querySelector(":scope > [class*='required' i]") ? "required" : ""}`);
+    const labelEl = nearbyEl(parent);
+    d.required = looksRequired(parent, `${labelEl ? ownText(labelEl, 400) : ""} ${d.label ?? ""} ${parent.parentElement?.querySelector(":scope > [class*='required' i]") ? "required" : ""}`);
     d.visible = buttons.some((b) => isVisible(b));
     d.disabled = buttons.every((b) => (b as HTMLButtonElement).disabled);
     const on = buttons.filter(choiceOn);

@@ -29,7 +29,7 @@ docs/        SECURITY.md, WINDOWS.md, VALIDATION.md (real-site checklist)
 | 22-24 | Generic, Greenhouse and Lever adapters | done |
 | 25-27 | Repeatable sections: work experience, education, certifications, languages | done |
 | 28-35 | Date engine, manual question queue, question memory, custom question engine, optional local AI | done |
-| 36-37 | Workday, Ashby, iCIMS and SmartRecruiters adapters | tested on mock pages only; the Ashby, iCIMS and SmartRecruiters mocks are modelled from memory of the real markup, not copied from live sites |
+| 36-37 | Workday, Ashby, iCIMS and SmartRecruiters adapters | tested on mock pages only; the Ashby, iCIMS and SmartRecruiters mocks are modelled from memory of the real markup, not copied from live sites. One more Ashby mock replicates the questions, labels and widgets of a real Deepgram application (from a printout of the page), but its HTML is still a guess |
 | 38-39 | Application history and duplicate detection | done |
 | 40 | Security hardening ([docs/SECURITY.md](docs/SECURITY.md)) | done |
 | 41 | Testing: backend, extension unit, browser end-to-end | done (see below) |

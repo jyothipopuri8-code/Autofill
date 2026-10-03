@@ -95,7 +95,7 @@ def build_context(s: Session, sess: ApplicationSession, ai: Any = None, today: d
         profile=profile, profile_version=version_of(prof.updated_at) if prof else None,
         work_auth_verified=bool(prof and prof.work_authorization_verified), sensitive=sensitive, library=library,
         resume=resume, resume_blocked=rs["blocked"], overrides=dict(sess.overrides or {}), approved=approved,
-        job={"company": app.company, "title": app.job_title, "description": app.job_description},
+        job={"company": app.company, "title": app.job_title, "description": app.job_description, "location": app.location},
         today=today or date.today(), ai=ai,
     )
 

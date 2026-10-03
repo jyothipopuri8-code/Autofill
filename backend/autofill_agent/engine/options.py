@@ -99,6 +99,37 @@ def _unique(cands: list[Option], factor: float, note: str | None = None) -> Opti
     return OptionMatch(None, 0.0, "More than one option fits" if cands else None)
 
 
+def _place_parts(text: str) -> list[str]:
+    return [x.strip() for x in re.split(r"[,/]", text) if x.strip()]
+
+
+def _match_place(value: str, opts: list[Option]) -> OptionMatch | None:
+    """A "City, ST" answer against place-search results such as "Austin, Texas, United States".
+
+    The city must match exactly, the state (abbreviation or name) must match when we know it, and a country that
+    is listed must be the United States. Several matches (two Austins in the same state is not a thing, but two
+    results for one place can be) are not guessed between.
+    """
+    want = _place_parts(value)
+    if not want:
+        return None
+    city = _norm(want[0])
+    state = _state_key(want[1]) if len(want) > 1 else None
+    us = _country_key("United States")
+    hits = []
+    for o in opts:
+        parts = _place_parts(o.label)
+        if not parts or _norm(parts[0]) != city:
+            continue
+        if state and not any(_state_key(x) == state for x in parts[1:3]):
+            continue
+        countries = [_country_key(x) for x in parts[1:] if _country_key(x) is not None]
+        if countries and us not in countries:
+            continue
+        hits.append(o)
+    return _unique(hits, 0.97, "Matched the city and state") if hits else None
+
+
 def match_option(value: str | None, options: list[Option], canonical: str | None = None) -> OptionMatch:
     opts = usable(options)
     if not value or not opts:
@@ -110,6 +141,10 @@ def match_option(value: str | None, options: list[Option], canonical: str | None
         return _unique(exact, 1.0)
 
     canonical = canonical or ""
+    if canonical == "location.location":
+        placed = _match_place(value, opts)
+        if placed:
+            return placed
     if canonical.endswith("location.state") or canonical == "location.state":
         key = _state_key(value)
         if key:

@@ -76,30 +76,42 @@ export function groupLegend(el: HTMLElement): string {
   return "";
 }
 
-/** Text of the closest preceding label-like element, for controls with no real <label>. */
-export function nearbyText(el: HTMLElement): string {
+const HELP_LIKE = /help|hint|descr|caption|sub-?text|instruction|note|tooltip/i;
+const NOT_A_LABEL = "input,select,textarea,button,script,style,ul,ol,dl,table";
+
+/**
+ * The closest preceding label-like element, for controls with no real <label>. Help text ("Input gender") and
+ * definition lists sit between a heading and its options on some sites, so those never win over a heading.
+ */
+export function nearbyEl(el: HTMLElement): HTMLElement | null {
   let node: HTMLElement | null = el;
   for (let depth = 0; node && depth < 4; depth++, node = node.parentElement) {
     let prev = node.previousElementSibling as HTMLElement | null;
+    let helpFallback: HTMLElement | null = null;
     for (let hops = 0; prev && hops < 2; hops++, prev = prev.previousElementSibling as HTMLElement | null) {
-      if (prev.matches("input,select,textarea,button,script,style")) continue;
+      if (prev.matches(NOT_A_LABEL)) continue;
       if (prev.querySelector("input,select,textarea") && !prev.matches("label")) continue;
-      const t = ownText(prev, 400);
-      if (t) return cleanLabel(t);
+      if (!ownText(prev, 400)) continue;
+      if (HELP_LIKE.test(typeof prev.className === "string" ? prev.className : "")) { helpFallback ??= prev; continue; }
+      return prev;
     }
+    if (helpFallback) return helpFallback;
     // A label-ish child of the wrapper that precedes the control inside the wrapper.
     const parent: HTMLElement | null = node.parentElement;
     if (parent) {
       const lab: Element | null = parent.querySelector(":scope > label, :scope > legend, :scope > [class*='label' i], :scope > span, :scope > p");
       const isOptionLabel = (lab as HTMLLabelElement | null)?.control instanceof HTMLInputElement
         && ["radio", "checkbox"].includes(((lab as HTMLLabelElement).control as HTMLInputElement).type);
-      if (lab && lab !== node && !lab.contains(el) && !isOptionLabel) {
-        const t = ownText(lab, 400);
-        if (t) return cleanLabel(t);
-      }
+      if (lab && lab !== node && !lab.contains(el) && !isOptionLabel && ownText(lab, 400)) return lab as HTMLElement;
     }
   }
-  return "";
+  return null;
+}
+
+/** Text of the closest preceding label-like element, for controls with no real <label>. */
+export function nearbyText(el: HTMLElement): string {
+  const n = nearbyEl(el);
+  return n ? cleanLabel(ownText(n, 400)) : "";
 }
 
 export function labelInfo(el: HTMLElement, isGroupMember = false): LabelInfo {

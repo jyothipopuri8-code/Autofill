@@ -219,3 +219,60 @@ def test_icims_like_classic_table_layout(session, agent):
     assert page.evaluate("document.getElementById('resume_1').files[0]?.name") == "Jane.pdf"
     assert page.input_value("[name=q_comp]") == "", "salary expectations must be left for the person"
     assert page.evaluate("window.__submitClicks") == 0
+
+
+# --- the real Deepgram application on Ashby (a replica built from a printout of the live page) ---------------------
+
+def test_deepgram_ashby_application_field_by_field(session, agent):
+    s = session("ashby_deepgram.html")
+    fill_all(s)
+    page = s.page
+    app = agent.api("GET", "/api/v1/sessions").json()[0]["application"]
+    assert app["ats"] == "ASHBY" and app["company"] == "Deepgram" and app["job_title"] == "Security Engineer"
+    assert "USA" in (app.get("location") or "")
+
+    assert page.input_value("#_systemfield_name") == "Jane Doe"
+    assert page.input_value("#_systemfield_email") == "jane.doe@example.com"
+    assert re.sub(r"\D", "", page.input_value("#q-phone")).endswith("5551234567")
+    assert page.input_value("#q-li") == "https://linkedin.com/in/janedoe"
+
+    # The resume goes into the Resume field once. The site's own "Autofill from resume" uploader is left alone,
+    # because Ashby would parse the file on its server and overwrite what the agent filled.
+    assert page.evaluate("document.getElementById('_systemfield_resume').files[0]?.name") == "Jane.pdf"
+    assert page.evaluate("document.getElementById('autofill-file').files.length") == 0
+    assert page.evaluate("window.__autofillUploads") == 0
+
+    state = page.evaluate("window.__state()")
+    assert state["home"] == "Austin, Texas, United States", "the typeahead needs the Texas entry, not Minnesota or Arkansas"
+    # The role is in the USA and the profile is verified for the USA, so work authorization is answered. The sponsorship
+    # question is only 92% sure ("now or in the future"), so it is proposed for the person to confirm, not filled.
+    assert state["auth"] == "Yes" and state["sponsor"] is None
+    sponsor = s.page.locator("[data-autofill-agent] .card", has_text="visa sponsorship")
+    assert "Proposed: No" in sponsor.inner_text()
+    sponsor.locator("button", has_text="Use this").click()
+    s.page.wait_for_function("window.__state().sponsor === 'No'")
+
+    # Not in the profile: suggested or left for the person, never invented.
+    assert page.input_value("#q-pfn") == "" and page.input_value("#q-pln") == ""
+    text = s.panel_text()
+    assert "Preferred First Name" in text and "suggesting your first name" in text
+    # The suggestion waits in the card's answer box; nothing reaches the page until the person presses the button.
+    pfn = s.page.locator("[data-autofill-agent] .card", has_text="Preferred First Name")
+    assert pfn.locator("input[type=text]").input_value() == "Jane"
+    assert page.input_value("#q-pfn") == ""
+    # Voluntary self-identification stays with the person.
+    assert state["eeo"] == [None, None, None]
+    for q in ("Gender", "Race", "Veteran Status"):
+        assert q in text
+    assert page.evaluate("window.__submitClicks") == 0
+
+
+@pytest.mark.parametrize("where", ["Berlin, Germany", "Remote"])
+def test_work_authorization_for_the_country_of_the_role_needs_a_known_us_role(session, agent, where):
+    # "the country where this role is located" is only answered from a US-only profile when the role is known to be in the US.
+    s = session(f"ashby_deepgram.html?loc={where}")
+    fill_all(s)
+    state = s.page.evaluate("window.__state()")
+    assert state["auth"] is None and state["sponsor"] is None
+    text = s.panel_text()
+    assert "legally authorized to work" in text and "visa sponsorship" in text

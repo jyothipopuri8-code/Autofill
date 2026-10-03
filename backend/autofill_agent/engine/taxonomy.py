@@ -43,9 +43,12 @@ SPECS: list[Spec] = [
        [r"^(f ?name|first ?name|first|given ?name|forename|candidate first name)$", r"\bfirst name\b"], ["given-name"],
        deny=[r"\bpreferred\b"], kinds=TEXTY),
     _s("personal.last_name", [r"\b(legal |candidate |applicant )?last name\b", r"\bfamily name\b", r"\bsurname\b"],
-       [r"^(l ?name|last ?name|last|surname|family ?name|candidate last name)$", r"\blast name\b"], ["family-name"], kinds=TEXTY),
+       [r"^(l ?name|last ?name|last|surname|family ?name|candidate last name)$", r"\blast name\b"], ["family-name"],
+       deny=[r"\bpreferred\b"], kinds=TEXTY),
     _s("personal.middle_name", [r"\bmiddle (name|initial)\b"], [r"^(middle ?name|mname|middle)$"], ["additional-name"], kinds=TEXTY),
     _s("personal.preferred_name", [r"\bpreferred (first )?name\b", r"\bnick ?name\b", r"\bgo(es)? by\b"], [r"\bpreferred name\b", r"^nickname$"], kinds=TEXTY),
+    # Only worth entering when it differs from the legal last name ("if applicable"); nothing in the profile says so.
+    _s("personal.preferred_last_name", [r"\bpreferred (last|family) name\b", r"\bpreferred surname\b"], [r"preferred ?(last|family)"], kinds=TEXTY),
     _s("personal.full_name", [r"^(your |legal |candidate |applicant )?(full )?name$", r"\bfull name\b", r"\blegal name\b", r"^your name$"],
        [r"^(full ?name|name|your ?name|applicant ?name|candidate ?name)$"], ["name"], kinds=TEXTY),
     _s("personal.pronouns", [r"\bpronouns?\b"], [r"^pronouns?$"], kinds=TEXTY + ("radio_group",)),
@@ -69,7 +72,7 @@ SPECS: list[Spec] = [
        deny=[r"\bunited states\b"], kinds=TEXTY),
     _s("location.country", [r"\bcountry\b"], [r"^country$"], ["country", "country-name"], deny=[r"\bcode\b", r"\bphone\b", r"\bcitizen"], kinds=TEXTY),
     _s("location.postal_code", [r"\b(zip|postal|post) ?(code)?\b", r"\bpostcode\b"], [r"zip", r"postal", r"post ?code"], ["postal-code"], kinds=TEXTY),
-    _s("location.location", [r"^(current |your |preferred )?location\b", r"\bwhere are you (located|based)\b", r"\bcity,? state\b"], [r"^location$"], kinds=TEXTY),
+    _s("location.location", [r"^(current |your |preferred |home )?location\b", r"^home (city|town)\b", r"\bwhere are you (located|based)\b", r"\bcity,? state\b"], [r"^location$"], kinds=TEXTY),
     # --- work authorization ----------------------------------------------
     _s("work_auth.sponsorship_any", [r"\bnow or in the future\b.*\bsponsor", r"\b(now|currently) (and|or) (in the )?future\b.*\bsponsor", r"\bh ?1 ?b\b.*\bsponsor", r"\bsponsor\w*\b.*\b(now or in the future|now and in the future)\b"], kinds=CHOICE, cat="profile"),
     _s("work_auth.sponsorship_future", [r"\bsponsor\w*\b.*\bfuture\b", r"\bfuture\b.*\bsponsor"], kinds=CHOICE),

@@ -296,3 +296,67 @@ def test_month_dropdown_never_invents_a_missing_month():
     assert m.option is None and "month" in (m.note or "")
     assert match_date_option("2021-09", opts).option.label == "September"
     assert match_date_option("2021-09", [Option(label=str(y), value=str(y)) for y in (2020, 2021)]).option.label == "2021"
+
+
+# --- found by checking the real Deepgram application (Ashby) -------------------------------------------------------
+
+YN = [{"value": "Yes", "label": "Yes"}, {"value": "No", "label": "No"}]
+
+
+def test_site_resume_autofill_uploader_is_not_the_resume_field():
+    widget = resolve_field(fd(kind="file", label="Autofill from resume", nearby_text="Upload your resume here to autofill key application fields."), ctx(), "ASHBY")
+    assert widget.action == "skip" and "resume field" in widget.reason.lower()
+    real = resolve_field(fd(kind="file", label="Resume", required=True), ctx(), "ASHBY")
+    assert real.action == "attach"
+
+
+def test_preferred_first_name_is_suggested_not_filled_and_preferred_last_name_is_left_alone():
+    r = resolve_field(fd(label="Preferred First Name", required=True), ctx())
+    assert r.action == "ask" and r.suggestion == "Jane" and r.value is None
+    saved = resolve_field(fd(label="Preferred First Name", required=True), ctx(profile={**ctx().profile, "preferred_name": "Janie"}))
+    assert saved.action == "fill" and saved.value == "Janie"
+    last = resolve_field(fd(label="Preferred Last Name (if applicable)"), ctx())
+    assert last.action == "ask" and last.value is None  # optional, so it is not even listed for the person
+
+
+COUNTRY_Q = "Are you legally authorized to work in the country where this role is located?"
+SPONSOR_Q = "Will you now or in the future require visa sponsorship to work in the country where this role is located?"
+
+
+@pytest.mark.parametrize("location,filled", [
+    ("USA - Remote", True), ("United States", True), ("Austin, TX", True), ("Remote, US", True), ("New York, NY (Hybrid)", True),
+    ("Berlin, Germany", False), ("London, UK", False), ("Toronto, Canada", False), ("Remote", False), (None, False), ("", False),
+    ("Santa Fe, New Mexico", False),  # a state name alone does not say which country; ask rather than guess
+])
+def test_country_of_the_role_is_answered_only_when_the_role_is_known_to_be_in_the_us(location, filled):
+    for q, expected in ((COUNTRY_Q, "Yes"), (SPONSOR_Q, "No")):
+        r = resolve_field(fd(kind="radio_group", label=q, required=True, options=YN), ctx(job={"company": "Deepgram", "title": "SE", "location": location}), "ASHBY")
+        if filled:
+            assert r.option["label"] == expected and r.action in ("fill", "review"), (location, q)
+        else:
+            assert r.action == "ask" and r.option is None, (location, q)
+
+
+@pytest.mark.parametrize("q,expected_filled", [
+    ("Are you legally authorized to work in the United States?", True),
+    ("Are you authorized to work in the US?", True),
+    ("Are you legally authorized to work in Canada?", False),
+    ("Are you authorized to work in the UK or the EU?", False),
+    ("Are you authorized to work in the United States or Canada?", False),
+    ("Are you legally authorized to work in New Mexico, United States?", True),
+])
+def test_named_country_in_a_work_authorization_question(q, expected_filled):
+    r = resolve_field(fd(kind="radio_group", label=q, options=YN), ctx(job={"location": "Berlin, Germany"}))
+    assert (r.option is not None) is expected_filled, q
+
+
+def test_home_location_typeahead_matches_city_and_state_in_place_results():
+    places = [{"value": p, "label": p} for p in ["Austin, Minnesota, United States", "Austin, Texas, United States", "Austin, Arkansas, United States"]]
+    r = resolve_field(fd(kind="custom_select", label="Home Location", required=True, options=places), ctx(), "ASHBY")
+    assert r.option["label"] == "Austin, Texas, United States" and r.action in ("fill", "review")
+    # Without the options the answer is the profile's "City, ST", typed into the search box.
+    bare = resolve_field(fd(kind="custom_select", label="Home Location", required=True), ctx(), "ASHBY")
+    assert bare.value == "Austin, TX"
+    # A result list with no Texas entry is never guessed between.
+    wrong = resolve_field(fd(kind="custom_select", label="Home Location", options=[p for p in places if "Texas" not in p["label"]]), ctx(), "ASHBY")
+    assert wrong.action == "ask"

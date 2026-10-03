@@ -167,20 +167,32 @@ async function fillCustomSelect(c: Control, r: FieldResult): Promise<{ ok: boole
   const fullList = labelsOf(opts);
   let hit = pick(opts);
 
-  // 2. Search-as-you-type widgets only list options once something is typed.
+  // 2. Search-as-you-type widgets only list options once something is typed. Try the whole answer first, then just
+  //    its first part (the city of "Austin, TX"), which is what place searches start from. What the search lists is
+  //    kept, so the agent can choose between real results if none matches exactly.
+  let typedList: string[] = [];
   if (hit.length !== 1 && isInput) {
-    setNativeValue(el as HTMLInputElement, target);
-    fireInput(el, target);
-    await waitFor(() => { const o = visibleOptions(doc, el); return o.length ? o : null; }, 1500);
-    await sleep(120);
-    hit = pick(visibleOptions(doc, el));
+    const queries = [target];
+    const head = target.split(",")[0].trim();
+    if (head.length >= 2 && head !== target) queries.push(head);
+    for (const q of queries) {
+      setNativeValue(el as HTMLInputElement, q);
+      fireInput(el, q);
+      await waitFor(() => { const o = visibleOptions(doc, el); return o.length ? o : null; }, 1500);
+      await sleep(120);
+      const shown = visibleOptions(doc, el);
+      if (shown.length) typedList = labelsOf(shown);
+      hit = pick(shown);
+      if (hit.length === 1) break;
+    }
   }
 
   if (hit.length !== 1) {
     if (isInput && (el as HTMLInputElement).value) { setNativeValue(el as HTMLInputElement, ""); fireInput(el); }
     close(el);
-    const why = hit.length > 1 ? `Several options match "${target}"` : fullList.length ? `No option matches "${target}"` : "The dropdown did not show any options";
-    return { ok: false, error: why, options: fullList.length ? fullList : undefined };
+    const seen = fullList.length ? fullList : typedList;
+    const why = hit.length > 1 ? `Several options match "${target}"` : seen.length ? `No option matches "${target}"` : "The dropdown did not show any options";
+    return { ok: false, error: why, options: seen.length ? seen : undefined };
   }
   realClick(hit[0]);
   await sleep(60);

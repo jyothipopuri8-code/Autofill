@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Security Engineer @ Deepgram</title>
+  <!-- A replica of the real Deepgram application on Ashby: the questions, labels, placeholders, order and widgets are
+       copied from a printout of the live page (the person who owns the agent sent it). The HTML underneath is a guess
+       at Ashby's markup (CSS-module class names, segmented Yes/No buttons, a typeahead for location, hidden file inputs). -->
+  <style>
+    body{font:16px system-ui;max-width:720px;margin:24px auto;padding:0 16px;color:#333}
+    ._card_1{border:1px solid #ddd;border-radius:8px;padding:18px;margin:16px 0}
+    ._entry_1{margin:18px 0}._heading_1{display:block;font-weight:600;margin-bottom:6px}
+    ._help_1{font-size:13px;color:#666;margin-bottom:6px}
+    ._input_1{width:100%;padding:12px;box-sizing:border-box;border:1px solid #888;border-radius:8px;font:inherit}
+    ._seg_1{display:inline-flex;border:1px solid #aaa;border-radius:8px;overflow:hidden}
+    ._seg_1 button{width:62px;padding:14px 4px;border:0;background:#fff;color:#888;font:inherit;font-weight:600;cursor:pointer}
+    ._seg_1 button+button{border-left:1px solid #aaa}
+    ._seg_1 button._active_1{background:#6a0dd6;color:#fff}
+    ._pill_1{border:2px solid #6a0dd6;border-radius:999px;background:#fff;color:#6a0dd6;font-weight:700;padding:8px 18px;cursor:pointer}
+    ._list_1{list-style:none;margin:0;padding:0;border:1px solid #aaa;border-radius:8px;position:absolute;background:#fff;width:100%;z-index:5}
+    ._list_1 li{padding:10px 12px;cursor:pointer}._list_1 li:hover{background:#eee}
+    ._radio_1{display:flex;gap:10px;align-items:center;margin:8px 0}
+  </style>
+</head>
+<body>
+  <h1>Security Engineer</h1>
+  <div class="_card_1" id="overview">
+    <div class="_info_1"><div class="_k_1">Location</div><div class="_v_1">USA - Remote</div></div>
+    <div class="_info_1"><div class="_k_1">Employment Type</div><div class="_v_1">Full time</div></div>
+    <div class="_info_1"><div class="_k_1">Location Type</div><div class="_v_1">Remote</div></div>
+    <div class="_info_1"><div class="_k_1">Department</div><div class="_v_1">Engineering</div></div>
+    <p>Deepgram is hiring a Security Engineer to protect our speech AI platform. You will assess risks across our applications and infrastructure, run security reviews with engineers and respond to incidents across the company.</p>
+  </div>
+  <div class="_card_1" id="autofill-box">
+    <b>Autofill from resume</b>
+    <div>Upload your resume here to autofill key application fields.</div>
+    <button type="button" class="_pill_1" id="autofill-pick">Upload file</button>
+    <input type="file" id="autofill-file" style="display:none">
+  </div>
+  <div class="_card_1"><b>This job has application limits</b><p>Candidates may not apply more than 2 times in any 60 day span for any job in the General Application Limit Setting Group.</p></div>
+
+  <form id="form" class="ashby-application-form-container">
+    <div class="_card_1">
+      <h2>Apply for this Job</h2>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="_systemfield_name">Full Legal Name<span style="color:#b00">*</span></label>
+        <input id="_systemfield_name" name="_systemfield_name" class="_input_1" type="text" placeholder="Type here..." required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="q-pfn">Preferred First Name<span style="color:#b00">*</span></label>
+        <input id="q-pfn" name="b7e1c2a0-0001" class="_input_1" type="text" placeholder="Type here..." required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="q-pln">Preferred Last Name (if applicable)</label>
+        <input id="q-pln" name="b7e1c2a0-0002" class="_input_1" type="text" placeholder="Type here...">
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="_systemfield_email">Email<span style="color:#b00">*</span></label>
+        <input id="_systemfield_email" name="_systemfield_email" class="_input_1" type="email" placeholder="hello@example.com..." required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="q-phone">Phone<span style="color:#b00">*</span></label>
+        <input id="q-phone" name="b7e1c2a0-0003" class="_input_1" type="tel" placeholder="1-415-555-1234..." required>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1">Resume<span style="color:#b00">*</span></label>
+        <button type="button" class="_pill_1" id="resume-pick">Upload File</button>
+        <input type="file" id="_systemfield_resume" name="_systemfield_resume" style="display:none">
+        <div>or drag and drop here</div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1">
+        <label class="ashby-application-form-question-title _heading_1" for="q-li">LinkedIn</label>
+        <input id="q-li" name="b7e1c2a0-0004" class="_input_1" type="text" placeholder="Type here...">
+      </div>
+    </div>
+
+    <div class="_card_1">
+      <h2>Location &amp; Sponsorship</h2>
+      <div class="ashby-application-form-field-entry _entry_1" style="position:relative">
+        <label class="ashby-application-form-question-title _heading_1" for="q-home">Home Location<span style="color:#b00">*</span></label>
+        <div class="_help_1">The city you currently live in. Start typing and select from the list.</div>
+        <input id="q-home" name="b7e1c2a0-0005" class="_input_1" type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="home-list" placeholder="Start typing..." autocomplete="off">
+        <ul id="home-list" class="_list_1" role="listbox" hidden></ul>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="q-auth">
+        <label class="ashby-application-form-question-title _heading_1">Are you legally authorized to work in the country where this role is located?<span style="color:#b00">*</span></label>
+        <div class="_seg_1"><button type="button">Yes</button><button type="button">No</button></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="q-sponsor">
+        <label class="ashby-application-form-question-title _heading_1">Will you now or in the future require visa sponsorship to work in the country where this role is located?<span style="color:#b00">*</span></label>
+        <div class="_seg_1"><button type="button">Yes</button><button type="button">No</button></div>
+      </div>
+    </div>
+
+    <div class="_card_1">
+      <h3>U.S. EQUAL EMPLOYMENT OPPORTUNITY INFORMATION <small>(Completion is voluntary and will not subject you to adverse treatment)</small></h3>
+      <p>We invite all applicants to voluntarily self-identify their race, ethnicity, and gender.</p>
+      <div class="ashby-application-form-field-entry _entry_1" id="eeo-gender">
+        <div class="_heading_1">Gender</div>
+        <div class="_help_1">Input gender</div>
+        <div class="_radio_1"><input type="radio" id="g1" name="gender" value="Male"><label for="g1">Male</label></div>
+        <div class="_radio_1"><input type="radio" id="g2" name="gender" value="Female"><label for="g2">Female</label></div>
+        <div class="_radio_1"><input type="radio" id="g3" name="gender" value="Decline"><label for="g3">Decline to self-identify</label></div>
+      </div>
+      <div class="ashby-application-form-field-entry _entry_1" id="eeo-race">
+        <div class="_heading_1">Race</div>
+        <ul>
+          <li><b>Hispanic or Latino</b> - A person of Cuban, Mexican, Puerto Rican, South or Central American, or other Spanish culture or origin regardless of race.</li>
+          <li><b>White</b> (Not Hispanic or Latino) - A person having origins in any of the original peoples of Europe, the Middle East, or North Africa.</li>
+          <li><b>Asian</b> (Not Hispanic or Latino) - A person having origins in any of the original peoples of the Far East, Southeast Asia, or the Indian Subcontinent.</li>
+        </ul>
+        <div class="_radio_1"><input type="radio" id="r1" name="race" value="Hispanic"><label for="r1">Hispanic or Latino</label></div>
+        <div class="_radio_1"><input type="radio" id="r2" name="race" value="White"><label for="r2">White (Not Hispanic or Latino)</label></div>
+        <div class="_radio_1"><input type="radio" id="r3" name="race" value="Asian"><label for="r3">Asian (Not Hispanic or Latino)</label></div>
+        <div class="_radio_1"><input type="radio" id="r4" name="race" value="Decline"><label for="r4">Decline to self-identify</label></div>
+      </div>
+      <h3>SELF-IDENTIFICATION OF VETERAN STATUS <small>(Completion is voluntary and will not subject you to adverse treatment)</small></h3>
+      <div class="ashby-application-form-field-entry _entry_1" id="eeo-vet">
+        <div class="_heading_1">Veteran Status</div>
+        <div class="_radio_1"><input type="radio" id="v1" name="vet" value="Yes"><label for="v1">I identify as one or more of the classifications of protected veteran listed above</label></div>
+        <div class="_radio_1"><input type="radio" id="v2" name="vet" value="No"><label for="v2">I am not a protected veteran</label></div>
+        <div class="_radio_1"><input type="radio" id="v3" name="vet" value="Decline"><label for="v3">I decline to self-identify for protected veteran status</label></div>
+      </div>
+    </div>
+    <button type="submit" id="submit" class="_pill_1" style="width:100%;background:#6a0dd6;color:#fff;padding:16px">Submit Application</button>
+  </form>
+
+  <script>
+    window.__submitClicks = 0;
+    window.__autofillUploads = 0;
+    { const loc = new URLSearchParams(location.search).get("loc"); if (loc !== null) document.querySelector("._v_1").textContent = loc; }
+    document.getElementById("form").addEventListener("submit", (e) => { e.preventDefault(); window.__submitClicks++; });
+    document.querySelectorAll("._seg_1").forEach((g) => g.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      g.querySelectorAll("button").forEach((x) => x.classList.toggle("_active_1", x === b));
+    }));
+    document.getElementById("resume-pick").addEventListener("click", () => document.getElementById("_systemfield_resume").click());
+    document.getElementById("autofill-pick").addEventListener("click", () => document.getElementById("autofill-file").click());
+    // Ashby parses a resume uploaded here on its server and would overwrite fields, so the test counts uploads.
+    document.getElementById("autofill-file").addEventListener("change", () => { window.__autofillUploads++; });
+    // Location typeahead: nothing is listed until something is typed, and the list only starts-with matches (like a places search).
+    const PLACES = ["Austin, Texas, United States", "Austin, Minnesota, United States", "Austin, Arkansas, United States", "Austin, Indiana, United States",
+      "Dallas, Texas, United States", "Boston, Massachusetts, United States", "Berlin, Germany"];
+    const input = document.getElementById("q-home"), list = document.getElementById("home-list");
+    function show(q) {
+      list.innerHTML = "";
+      const hits = q.length < 2 ? [] : PLACES.filter((p) => p.toLowerCase().startsWith(q.toLowerCase()));
+      for (const p of hits) {
+        const li = document.createElement("li"); li.setAttribute("role", "option"); li.textContent = p;
+        li.addEventListener("mousedown", () => { input.value = p; input.dataset.chosen = p; list.hidden = true; });
+        list.append(li);
+      }
+      list.hidden = !hits.length; input.setAttribute("aria-expanded", String(!!hits.length));
+    }
+    input.addEventListener("input", () => { delete input.dataset.chosen; show(input.value); });
+    window.__state = () => ({
+      auth: document.querySelector("#q-auth ._active_1")?.textContent ?? null,
+      sponsor: document.querySelector("#q-sponsor ._active_1")?.textContent ?? null,
+      home: input.dataset.chosen ?? null,
+      eeo: ["gender", "race", "vet"].map((n) => document.querySelector(`input[name=${n}]:checked`)?.value ?? null),
+    });
+  </script>
+</body>
+</html>

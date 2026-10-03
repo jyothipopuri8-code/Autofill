@@ -36,8 +36,33 @@ function description(doc: Document): string | null {
   return t.length >= 80 ? t : null;
 }
 
+/** schema.org JobPosting data many career sites publish for search engines (page text, so only ever shown or stored as text). */
+function jsonLdJob(doc: Document): Partial<JobInfo> {
+  const str = (v: unknown): string | null => (typeof v === "string" ? v : v && typeof v === "object" && typeof (v as { name?: unknown }).name === "string" ? (v as { name: string }).name : null);
+  const find = (node: unknown, depth = 0): Record<string, unknown> | null => {
+    if (!node || typeof node !== "object" || depth > 4) return null;
+    if (Array.isArray(node)) { for (const n of node) { const f = find(n, depth + 1); if (f) return f; } return null; }
+    const o = node as Record<string, unknown>;
+    const type = o["@type"];
+    if (type === "JobPosting" || (Array.isArray(type) && type.includes("JobPosting"))) return o;
+    return find(o["@graph"], depth + 1);
+  };
+  for (const s of Array.from(doc.querySelectorAll<HTMLScriptElement>("script[type='application/ld+json']"))) {
+    try {
+      const jp = find(JSON.parse(s.textContent || "null"));
+      if (!jp) continue;
+      const loc = Array.isArray(jp.jobLocation) ? jp.jobLocation[0] : jp.jobLocation;
+      const addr = (loc && typeof loc === "object" ? (loc as { address?: unknown }).address : null) as Record<string, unknown> | string | null;
+      const where = typeof addr === "string" ? addr
+        : addr ? [str(addr.addressLocality), str(addr.addressRegion), str(addr.addressCountry)].filter(Boolean).join(", ") : "";
+      return { job_title: str(jp.title), company: str(jp.hiringOrganization), location: where || null };
+    } catch { /* not JSON, or not what we expected: ignore */ }
+  }
+  return {};
+}
+
 export function collectJob(doc: Document, adapter: Adapter, url: URL): JobInfo {
-  const a = adapter.jobInfo(doc);
+  const a = { ...jsonLdJob(doc), ...Object.fromEntries(Object.entries(adapter.jobInfo(doc)).filter(([, v]) => v)) } as Partial<JobInfo>;
   const h1 = Array.from(doc.querySelectorAll<HTMLElement>("h1")).find(isVisible)?.textContent;
   let job_id = a.job_id ?? null;
   if (!job_id) {
